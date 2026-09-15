@@ -1,9 +1,11 @@
 import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
-import { Play, Pause, RotateCcw, Volume2, VolumeX, Smartphone, Monitor, Square, FastForward, SkipForward, SkipBack } from 'lucide-react';
+import { Play, Pause, RotateCcw, Volume2, VolumeX, Smartphone, Monitor, Square, SkipForward, SkipBack, Sparkles } from 'lucide-react';
 import { Project, Scene, Character, AspectRatio, CharacterEmotion } from '../../types/cartoon';
 import { getBackgroundSvgUrl } from '../../services/backgroundGenerator';
 import { soundSynthesizer } from '../../services/soundSynthesizer';
 import { speechSynthesizer } from '../../services/speechSynthesizer';
+import { LivingAnimationEngine, CharacterChoreography } from '../../services/livingAnimationEngine';
+import { LivingBackgroundEngine } from '../../services/livingBackgroundEngine';
 
 export interface VideoPlayerRef {
   getCanvas: () => HTMLCanvasElement | null;
@@ -85,7 +87,7 @@ export const VideoPlayerCanvas = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
     pause: () => { if (isPlaying) onTogglePlay(); },
   }));
 
-  // BGM sync
+  // BGM playback sync
   useEffect(() => {
     if (isPlaying && !isMuted) {
       soundSynthesizer.startBGM(project.bgm, project.bgmVolume || 0.35);
@@ -97,7 +99,7 @@ export const VideoPlayerCanvas = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
     };
   }, [isPlaying, isMuted, project.bgm, project.bgmVolume]);
 
-  // Main Playback Loop with playback speed multiplier
+  // Main animation timer with speed scaling
   useEffect(() => {
     let animFrame: number;
     let lastTimestamp = performance.now();
@@ -127,7 +129,7 @@ export const VideoPlayerCanvas = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
   useEffect(() => {
     if (!isPlaying || isMuted || !currentScene) return;
 
-    // SFX
+    // Trigger SFX
     const sfxMarker = currentScene.sfxTime || 1.0;
     const sfxKey = `${currentScene.id}_${currentScene.sfx}`;
     if (
@@ -139,7 +141,7 @@ export const VideoPlayerCanvas = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
       soundSynthesizer.playSFX(currentScene.sfx);
     }
 
-    // Dialogue Speech
+    // Trigger Dialogue Speech
     let foundDlg: { char: Character; text: string; emotion: CharacterEmotion } | null = null;
     currentScene.dialogues.forEach(dlg => {
       if (sceneRelativeTime >= dlg.startTime && sceneRelativeTime < dlg.startTime + dlg.duration) {
@@ -156,7 +158,7 @@ export const VideoPlayerCanvas = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
     setActiveDialogue(foundDlg);
   }, [isPlaying, isMuted, currentScene, sceneRelativeTime, project.characters, playbackRate]);
 
-  // Canvas Compositor Render Loop
+  // Canvas Compositor Loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !currentScene) return;
@@ -165,147 +167,123 @@ export const VideoPlayerCanvas = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
 
     const width = canvas.width;
     const height = canvas.height;
+    const nowTime = currentTime;
 
     ctx.clearRect(0, 0, width, height);
 
-    // 1. Background
-    const bgUrl = getBackgroundSvgUrl(currentScene.backgroundUrl || 'forest-cottage');
-    const bgImg = getImage(bgUrl);
-
+    // 1. Dynamic Camera Directing based on Scene
     ctx.save();
     const sceneProgress = Math.min(1, Math.max(0, sceneRelativeTime / currentScene.duration));
     if (currentScene.cameraAngle === 'dynamic-pan') {
-      const zoom = 1.04 + Math.sin(sceneProgress * Math.PI) * 0.08;
-      const panX = (sceneProgress - 0.5) * 35;
+      const zoom = 1.05 + Math.sin(sceneProgress * Math.PI) * 0.08;
+      const panX = (sceneProgress - 0.5) * (width * 0.05);
       ctx.translate(width / 2, height / 2);
       ctx.scale(zoom, zoom);
       ctx.translate(-width / 2 + panX, -height / 2);
     } else if (currentScene.cameraAngle === 'close-up') {
       ctx.translate(width / 2, height / 2);
-      ctx.scale(1.15, 1.15);
+      ctx.scale(1.18, 1.18);
       ctx.translate(-width / 2, -height / 2);
+    } else if (currentScene.cameraAngle === 'wide-shot') {
+      const slowDrift = Math.sin(sceneProgress * Math.PI) * (width * 0.02);
+      ctx.translate(slowDrift, 0);
     }
 
-    if (bgImg) {
-      ctx.drawImage(bgImg, 0, 0, width, height);
-    } else {
-      const grad = ctx.createLinearGradient(0, 0, 0, height);
-      grad.addColorStop(0, '#064e3b');
-      grad.addColorStop(1, '#022c22');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, width, height);
-    }
+    // 2. Render Living Multi-Layer Forest Environment
+    const bgUrl = getBackgroundSvgUrl(currentScene.backgroundUrl || 'forest-cottage');
+    const bgImg = getImage(bgUrl);
+    const envType = currentScene.backgroundUrl?.includes('stream') 
+      ? 'river-stream' 
+      : currentScene.backgroundUrl?.includes('cottage') 
+      ? 'forest-cottage' 
+      : 'forest-cottage';
+
+    LivingBackgroundEngine.renderLivingForest(ctx, bgImg, width, height, nowTime, envType);
     ctx.restore();
 
-    // 2. Dynamic Forest Particles
-    const particles = currentScene.particleEffect || 'leaves';
-    const nowSec = performance.now() / 1000;
+    // 3. Script-Driven Scene Choreography for Characters
+    const sceneTitle = currentScene.title.toLowerCase();
+    const isForestTipScene = currentScene.act?.includes('Forest Tip') || sceneTitle.includes('tip') || sceneTitle.includes('celebration');
+    const isExplorationScene = currentScene.act?.includes('Exploration') || sceneTitle.includes('morning') || sceneTitle.includes('path');
+    const isEncounterScene = currentScene.act?.includes('Need') || sceneTitle.includes('meeting') || sceneTitle.includes('lost');
 
-    if (particles === 'leaves') {
-      ctx.fillStyle = '#f59e0b';
-      ctx.font = '22px sans-serif';
-      for (let i = 0; i < 10; i++) {
-        const lx = ((i * 180 + Math.sin(nowSec + i) * 60) % width);
-        const ly = ((nowSec * 50 + i * 110) % height);
-        ctx.fillText('🍃', lx, ly);
-      }
-    } else if (particles === 'butterflies') {
-      ctx.font = '24px sans-serif';
-      for (let i = 0; i < 6; i++) {
-        const bx = ((i * 280 + Math.sin(nowSec * 2 + i) * 80) % width);
-        const by = height * 0.4 + Math.sin(nowSec * 3 + i) * 60;
-        ctx.fillText('🦋', bx, by);
-      }
-    } else if (particles === 'stars') {
-      ctx.fillStyle = '#fef08a';
-      for (let i = 0; i < 18; i++) {
-        const px = ((i * 140) % width);
-        const py = ((i * 290 + nowSec * 25) % height);
-        const size = 2 + Math.sin(nowSec * 4 + i) * 1.5;
-        ctx.beginPath();
-        ctx.arc(px, py, Math.max(0.5, size), 0, Math.PI * 2);
-        ctx.fill();
-      }
-    } else if (particles === 'hearts') {
-      ctx.font = '24px sans-serif';
-      for (let i = 0; i < 8; i++) {
-        const hx = ((i * 240 + Math.sin(nowSec + i) * 40) % width);
-        const hy = height - ((nowSec * 60 + i * 120) % height);
-        ctx.fillText('💖', hx, hy);
-      }
+    // LiLo Choreography
+    const liloSpeaking = activeDialogue?.char.id === 'char_lilo' || activeDialogue?.char.name.toLowerCase().includes('lilo') || false;
+    let liloAction: CharacterChoreography['action'] = isForestTipScene ? 'waving' : isExplorationScene ? 'walking' : isEncounterScene ? 'crouching' : liloSpeaking ? 'talking' : 'idle';
+    let liloFacing: 'right' | 'left' = 'right';
+
+    // Walk across path calculation in exploration scenes
+    let liloX = width * 0.34;
+    if (isExplorationScene) {
+      liloX = width * 0.22 + (sceneProgress * width * 0.22);
+    } else if (isForestTipScene) {
+      liloX = width * 0.40;
     }
 
-    // 3. Render LiLo and Mozz character models
-    const charIds = currentScene.characters.length > 0
-      ? currentScene.characters
-      : ['char_lilo', 'char_mozz'];
+    const liloY = height * 0.63;
+    const liloSize = Math.min(width, height) * 0.45;
+    const liloChar = project.characters.find(c => c.id === 'char_lilo') || project.characters[0];
+    const liloImg = getImage(liloChar?.customAvatarUrl || liloChar?.avatarUrl || '/assets/lilo_mozz/lilo_sprite.png');
 
-    charIds.forEach((cId, idx) => {
-      const char = project.characters.find(c => c.id === cId) || (cId === 'char_lilo' ? project.characters[0] : project.characters[1]);
-      if (!char) return;
+    LivingAnimationEngine.drawMovingLiLo(
+      ctx,
+      liloImg,
+      liloX,
+      liloY,
+      liloSize,
+      nowTime,
+      liloSpeaking,
+      activeDialogue?.emotion || 'happy',
+      { action: liloAction, facing: liloFacing, targetX: 0.35, stageY: 0.65 }
+    );
 
-      const isSpeaking = activeDialogue?.char.id === char.id;
-      const charImgUrl = char.avatarUrl || char.customAvatarUrl || '';
-      const charImg = getImage(charImgUrl);
+    // Mozz Choreography
+    const mozzSpeaking = activeDialogue?.char.id === 'char_mozz' || activeDialogue?.char.name.toLowerCase().includes('mozz') || false;
+    let mozzAction: CharacterChoreography['action'] = isForestTipScene ? 'excited-jump' : isExplorationScene ? 'walking' : mozzSpeaking ? 'talking' : 'idle';
+    let mozzFacing: 'right' | 'left' = isForestTipScene ? 'right' : 'left';
 
-      // Positions: LiLo on the Left (0.35), Mozz on the Right (0.68)
-      let targetX = idx === 0 ? width * 0.35 : width * 0.68;
-      if (charIds.length === 1) targetX = width * 0.5;
+    let mozzX = width * 0.68;
+    if (isExplorationScene) {
+      mozzX = width * 0.55 + (sceneProgress * width * 0.2);
+      mozzFacing = 'right';
+    } else if (isForestTipScene) {
+      mozzX = width * 0.66;
+    }
 
-      const baseY = height * 0.64;
-      const idleFloat = Math.sin(nowSec * 3.5 + idx * 2) * 5;
-      const talkBounce = isSpeaking ? Math.abs(Math.sin(nowSec * 12)) * 15 : 0;
-      const charY = baseY - idleFloat - talkBounce;
+    const mozzY = height * 0.67;
+    const mozzSize = Math.min(width, height) * 0.38;
+    const mozzChar = project.characters.find(c => c.id === 'char_mozz') || project.characters[1] || project.characters[0];
+    const mozzImg = getImage(mozzChar?.customAvatarUrl || mozzChar?.avatarUrl || '/assets/lilo_mozz/mozz_portrait.jpg');
 
-      // Character size (Mozz cat is slightly smaller for realistic proportion)
-      const isCat = char.id === 'char_mozz' || char.name.toLowerCase().includes('mozz');
-      const scaleMultiplier = isCat ? 0.38 : 0.46;
-      const charSize = Math.min(width, height) * scaleMultiplier;
+    LivingAnimationEngine.drawMovingMozz(
+      ctx,
+      mozzImg,
+      mozzX,
+      mozzY,
+      mozzSize,
+      nowTime,
+      mozzSpeaking,
+      activeDialogue?.emotion || 'happy',
+      { action: mozzAction, facing: mozzFacing, targetX: 0.68, stageY: 0.67 }
+    );
 
+    // 4. Animal Friend Overlay (if in scene)
+    if (project.animalFriend && isEncounterScene) {
       ctx.save();
-      ctx.translate(targetX, charY);
+      const animalX = width * 0.52;
+      const animalY = height * 0.72 + Math.sin(nowTime * 4) * 4;
+      ctx.font = '54px sans-serif';
+      ctx.fillText(project.animalFriend.icon, animalX, animalY);
 
-      // Soft shadow
+      // Animal Speech / Glow
       ctx.beginPath();
-      ctx.ellipse(0, charSize * 0.48, charSize * 0.35, 12, 0, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      ctx.arc(animalX + 25, animalY - 20, 36, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(254, 240, 138, 0.25)';
       ctx.fill();
-
-      if (isSpeaking) {
-        ctx.shadowColor = '#ec4899';
-        ctx.shadowBlur = 24;
-      }
-
-      if (charImg) {
-        ctx.drawImage(charImg, -charSize / 2, -charSize / 2, charSize, charSize);
-      }
-
-      // Name Badge
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-      ctx.strokeStyle = isSpeaking ? '#ec4899' : 'rgba(255, 255, 255, 0.2)';
-      ctx.lineWidth = 2;
-      const tagText = `${char.name} ${isCat ? '🐾' : '🌸'}`;
-      ctx.font = 'bold 16px sans-serif';
-      const textWidth = ctx.measureText(tagText).width;
-      const pillW = textWidth + 24;
-      const pillH = 28;
-      const pillY = -charSize / 2 - 25;
-
-      ctx.beginPath();
-      ctx.roundRect(-pillW / 2, pillY, pillW, pillH, 14);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = isSpeaking ? '#f472b6' : '#ffffff';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(tagText, 0, pillY + pillH / 2);
-
       ctx.restore();
-    });
+    }
 
-    // 4. Subtitles Overlay (LiLo & Mozz style)
+    // 5. Living Subtitles Overlay
     if (activeDialogue) {
       ctx.save();
       const subY = height * 0.86;
@@ -336,13 +314,32 @@ export const VideoPlayerCanvas = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
       ctx.restore();
     }
 
-    // 5. Scene Fade Transition
+    // 6. Act Watermark & Forest Tip Badge
+    if (isForestTipScene) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.9)';
+      ctx.strokeStyle = '#34d399';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(width * 0.04, height * 0.06, 260, 44, 14);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🌿 LiLo\'s Forest Tip for Kids', width * 0.04 + 16, height * 0.06 + 22);
+      ctx.restore();
+    }
+
+    // 7. Scene Fade In
     if (sceneRelativeTime < 0.4 && currentScene.transition === 'fade') {
       const alpha = 1 - (sceneRelativeTime / 0.4);
       ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
       ctx.fillRect(0, 0, width, height);
     }
-  }, [currentTime, currentScene, activeDialogue, sceneRelativeTime, project.characters]);
+  }, [currentTime, currentScene, activeDialogue, sceneRelativeTime, project.characters, project.animalFriend]);
 
   const handleNextScene = () => {
     let target = 0;
@@ -384,7 +381,7 @@ export const VideoPlayerCanvas = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
 
   return (
     <div className="flex flex-col items-center gap-4 w-full max-w-5xl mx-auto p-4 select-none">
-      {/* Aspect Ratio & Playback Controls Bar */}
+      {/* Top Toolbar */}
       <div className="flex flex-wrap items-center justify-between w-full bg-slate-900/80 px-4 py-2.5 rounded-2xl border border-slate-800 backdrop-blur-md gap-3">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-slate-400">Aspect Ratio:</span>
@@ -419,10 +416,13 @@ export const VideoPlayerCanvas = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
           </div>
         </div>
 
-        {/* Speed Multipliers & Audio */}
+        {/* Speed & Live Status */}
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
-            <span className="text-[10px] text-slate-400 px-1 font-bold">Speed:</span>
+            <span className="text-[10px] text-emerald-400 px-1 font-bold flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-emerald-400" />
+              <span>Live View</span>
+            </span>
             {[1.0, 2.0, 4.0].map((rate) => (
               <button
                 key={rate}
@@ -451,7 +451,7 @@ export const VideoPlayerCanvas = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
       {/* Main Video Viewport Canvas */}
       <div
         ref={containerRef}
-        className="relative bg-slate-950 rounded-3xl overflow-hidden border-2 border-emerald-500/30 shadow-2xl shadow-emerald-500/20 flex items-center justify-center max-w-full"
+        className="relative bg-slate-950 rounded-3xl overflow-hidden border-2 border-emerald-500/40 shadow-2xl shadow-emerald-500/20 flex items-center justify-center max-w-full"
         style={{
           aspectRatio: aspectRatio === '16:9' ? '16/9' : aspectRatio === '9:16' ? '9/16' : '1/1',
           maxHeight: '65vh',
@@ -464,7 +464,7 @@ export const VideoPlayerCanvas = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
           className="w-full h-full object-contain"
         />
 
-        {/* Overlay Navigation Controls */}
+        {/* Floating Controls Overlay */}
         <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between bg-slate-950/85 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10 opacity-90 hover:opacity-100 transition">
           <div className="flex items-center gap-2 sm:gap-3">
             <button
@@ -504,7 +504,7 @@ export const VideoPlayerCanvas = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs px-2.5 py-1 rounded-lg bg-emerald-950/80 text-emerald-200 border border-emerald-500/40 font-bold truncate max-w-[200px] sm:max-w-xs">
+            <span className="text-xs px-2.5 py-1 rounded-lg bg-emerald-950/80 text-emerald-200 border border-emerald-500/40 font-bold truncate max-w-[220px] sm:max-w-xs">
               #{currentScene.sceneNumber}: {currentScene.title}
             </span>
           </div>
