@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Sparkles, Wand2, FileText, Play, Film, RefreshCw, Layers, CheckCircle2, MessageSquare } from 'lucide-react';
-import { Project, ArtStyle, AISettings } from '../../types/cartoon';
-import { generateCartoonProject, parseUserScreenplay } from '../../services/aiPipeline';
+import { Sparkles, Wand2, FileText, Film, RefreshCw, Layers, CheckCircle2, MessageSquare, Clock, Trees } from 'lucide-react';
+import { Project, AISettings, AnimalFriend } from '../../types/cartoon';
+import { generateLiLoMozzEpisode } from '../../services/liloMozzEngine';
+import { parseUserScreenplay } from '../../services/aiPipeline';
+import { ANIMAL_FRIENDS } from '../../data/liloMozzDefaults';
 
 interface ScriptWizardProps {
   project: Project;
@@ -10,31 +12,45 @@ interface ScriptWizardProps {
   onNavigateToStoryboard: () => void;
 }
 
-const INSPIRATION_IDEAS = [
+const EPISODE_DURATIONS = [
+  { minutes: 2, label: '2 Minutes', desc: 'Mini Web Episode (~10 scenes)' },
+  { minutes: 3, label: '3 Minutes', desc: 'Quick Cartoon Adventure (~15 scenes)' },
+  { minutes: 5, label: '5 Minutes', desc: 'Standard TV Episode (~25 scenes)' },
+  { minutes: 10, label: '10 Minutes', desc: 'Extended Nature Arc (~45 scenes)' },
+  { minutes: 15, label: '15 Minutes', desc: 'Full Forest Adventure (~65 scenes)' },
+  { minutes: 20, label: '20 Minutes', desc: 'Feature Cartoon Special (~85 scenes)' },
+];
+
+const LILO_INSPIRATIONS = [
   {
-    title: '🚀 Space Snack Mission',
-    prompt: 'Two space adventurers discover a giant asteroid made entirely of glowing donuts with zero-gravity sprinkles.',
-    genre: 'sci-fi comedy',
+    title: '🐦 The Lost Forest Songbird',
+    prompt: 'LiLo and Mozz find a little blue songbird who lost its way home after a storm. They follow bird chirps and clear away fallen branches to reunite the bird family in the great ancient oak.',
+    animal: ANIMAL_FRIENDS[0],
+    duration: 3,
   },
   {
-    title: '🔍 Detective Duck & The Missing Donut',
-    prompt: 'A witty trench-coat detective duck investigates the mysterious disappearance of the golden bakery croissant.',
-    genre: 'mystery comedy',
+    title: '🐢 Toby the River Turtle & The Clean Stream',
+    prompt: 'LiLo and Mozz discover baby river turtles struggling to reach the water due to dropped plastic wrappers and litter. LiLo cleans up the stream and teaches children why freshwater ecosystems matter.',
+    animal: ANIMAL_FRIENDS[1],
+    duration: 5,
   },
   {
-    title: '🧁 Tiny Dragon Pastry Academy',
-    prompt: 'A baby fire dragon joins a prestigious pastry school and learns to caramelize crème brûlée with tiny flame burps.',
-    genre: 'fantasy cute',
+    title: '🦋 Bella the Butterfly\'s Wildflower Meadow',
+    prompt: 'A golden monarch butterfly needs to find blooming wildflower nectar before autumn. LiLo and Mozz plant seed bombs and restore the colorful garden clearing.',
+    animal: ANIMAL_FRIENDS[2],
+    duration: 5,
   },
   {
-    title: '🦸‍♂️ Superhero Sloth Saves The Day',
-    prompt: 'A super-slow sloth hero accidentally foils a supervillain bank robbery by moving so slowly lasers miss him.',
-    genre: 'action comedy',
+    title: '🐿️ Sammy the Squirrel\'s Acorn Mystery',
+    prompt: 'Sammy the squirrel forgot where his winter acorns were buried. While searching, LiLo learns how squirrels accidentally plant thousands of new oak saplings every year.',
+    animal: ANIMAL_FRIENDS[3],
+    duration: 5,
   },
   {
-    title: '🎮 Cyberpunk Arcade Escape',
-    prompt: 'Two retro video game sprites wake up in a neon futuristic metropolis and must defeat the glitch boss.',
-    genre: 'cyberpunk anime',
+    title: '🦌 Barnaby the Baby Deer & The Forest Trail',
+    prompt: 'LiLo and Mozz meet a gentle fawn near the blueberry thicket and guide it back safely to the mother deer while keeping the quiet woods peaceful.',
+    animal: ANIMAL_FRIENDS[4],
+    duration: 5,
   },
 ];
 
@@ -46,11 +62,11 @@ export const ScriptWizard: React.FC<ScriptWizardProps> = ({
 }) => {
   const [activeMode, setActiveMode] = useState<'ai-prompt' | 'screenplay-editor'>('ai-prompt');
   const [promptText, setPromptText] = useState(project.synopsis || '');
-  const [selectedGenre, setSelectedGenre] = useState('comedy-adventure');
-  const [sceneCount, setSceneCount] = useState(3);
+  const [selectedDuration, setSelectedDuration] = useState<number>(project.targetDurationMinutes || 3);
+  const [selectedAnimal, setSelectedAnimal] = useState<AnimalFriend>(project.animalFriend || ANIMAL_FRIENDS[0]);
   const [isGenerating, setIsGenerating] = useState(false);
+
   const [screenplayDraft, setScreenplayDraft] = useState(() => {
-    // Generate readable screenplay text from current project
     return project.scenes.map(s => {
       const charMap = new Map(project.characters.map(c => [c.id, c.name]));
       const dlgLines = s.dialogues.map(d => {
@@ -61,19 +77,21 @@ export const ScriptWizard: React.FC<ScriptWizardProps> = ({
     }).join('\n\n');
   });
 
-  const handleGenerateAI = async () => {
+  const handleGenerateEpisode = async () => {
     setIsGenerating(true);
     try {
-      const newProject = await generateCartoonProject({
-        prompt: promptText || 'Two cartoon pals embark on an unexpected adventure',
-        artStyle: project.artStyle,
-        genre: selectedGenre,
-        targetSceneCount: sceneCount,
+      const newProject = await generateLiLoMozzEpisode({
+        prompt: promptText || `LiLo and Mozz help ${selectedAnimal.name} in the forest`,
+        durationMinutes: selectedDuration,
+        selectedAnimal,
+        selectedOutfitLiLo: project.characters.find(c => c.id === 'char_lilo')?.selectedOutfit,
+        selectedOutfitMozz: project.characters.find(c => c.id === 'char_mozz')?.selectedOutfit,
         aiSettings,
       });
 
       onUpdateProject(() => newProject);
-      // Update screenplay draft
+
+      // Update draft
       const charMap = new Map(newProject.characters.map(c => [c.id, c.name]));
       const draft = newProject.scenes.map(s => {
         const dlgLines = s.dialogues.map(d => {
@@ -86,7 +104,7 @@ export const ScriptWizard: React.FC<ScriptWizardProps> = ({
 
       onNavigateToStoryboard();
     } catch (e) {
-      console.error('Generation error:', e);
+      console.error('Episode generation error:', e);
     } finally {
       setIsGenerating(false);
     }
@@ -96,34 +114,29 @@ export const ScriptWizard: React.FC<ScriptWizardProps> = ({
     const updated = parseUserScreenplay(screenplayDraft, project.artStyle);
     onUpdateProject(prev => ({
       ...prev,
-      characters: updated.characters,
       scenes: updated.scenes,
       title: updated.title || prev.title,
     }));
     onNavigateToStoryboard();
   };
 
-  const totalWords = project.scenes.reduce((acc, s) => {
-    return acc + s.dialogues.reduce((dAcc, d) => dAcc + d.text.split(/\s+/).length, 0);
-  }, 0);
-
   const totalRuntime = project.scenes.reduce((acc, s) => acc + s.duration, 0);
 
   return (
     <div className="max-w-7xl mx-auto p-6 flex flex-col gap-6">
-      {/* Top Banner */}
-      <div className="bg-gradient-to-r from-purple-900/40 via-indigo-900/30 to-pink-900/40 border border-purple-500/30 rounded-3xl p-6 backdrop-blur-xl relative overflow-hidden shadow-2xl">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Banner */}
+      <div className="bg-gradient-to-r from-emerald-950/60 via-purple-950/60 to-pink-950/60 border border-emerald-500/30 rounded-3xl p-6 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-purple-300 text-xs font-semibold uppercase tracking-wider mb-1">
-              <Sparkles className="w-4 h-4 text-purple-400" />
-              <span>AI Story & Screenplay Engine</span>
+            <div className="flex items-center gap-2 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-1">
+              <Trees className="w-4 h-4 text-emerald-400" />
+              <span>LiLo & Mozz Episode Generator (2 to 20 Minutes)</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-black text-white m-0 tracking-tight">
-              Turn Any Concept into a Full Animated Cartoon
+            <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+              Create New LiLo & Mozz Forest Adventures
             </h1>
             <p className="text-slate-300 text-sm mt-1 max-w-2xl">
-              Write a story idea or screenplay. The AI engine writes dynamic dialogues, plans camera framing, assigns character emotion states, and creates animated scenes automatically.
+              Input any script or story prompt. The engine automatically designs 4-act narrative arcs, dialogues with LiLo and Mozz, animal rescues, and concluding "Forest Tips".
             </p>
           </div>
 
@@ -137,7 +150,7 @@ export const ScriptWizard: React.FC<ScriptWizardProps> = ({
               }`}
             >
               <Wand2 className="w-3.5 h-3.5" />
-              <span>AI Story Generator</span>
+              <span>Episode Generator</span>
             </button>
 
             <button
@@ -155,15 +168,25 @@ export const ScriptWizard: React.FC<ScriptWizardProps> = ({
         </div>
       </div>
 
-      {/* Stats row */}
+      {/* Episode Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
             <Film className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-lg font-bold text-white">{project.scenes.length}</div>
-            <div className="text-xs text-slate-400">Total Scenes</div>
+            <div className="text-lg font-bold text-white">{project.scenes.length} Scenes</div>
+            <div className="text-xs text-slate-400">Total Scene Count</div>
+          </div>
+        </div>
+
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <Clock className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-lg font-bold text-white">{(totalRuntime / 60).toFixed(1)} Min</div>
+            <div className="text-xs text-slate-400">Episode Runtime ({totalRuntime.toFixed(0)}s)</div>
           </div>
         </div>
 
@@ -172,147 +195,160 @@ export const ScriptWizard: React.FC<ScriptWizardProps> = ({
             <MessageSquare className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-lg font-bold text-white">{totalWords}</div>
-            <div className="text-xs text-slate-400">Dialogue Words</div>
+            <div className="text-lg font-bold text-white">{project.animalFriend?.name || 'Forest Friend'}</div>
+            <div className="text-xs text-slate-400">{project.animalFriend?.species || 'Animal Hero'}</div>
           </div>
         </div>
 
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-            <Layers className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+            <Trees className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-lg font-bold text-white">{totalRuntime.toFixed(1)}s</div>
-            <div className="text-xs text-slate-400">Est. Duration</div>
-          </div>
-        </div>
-
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <CheckCircle2 className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-lg font-bold text-white capitalize">{project.artStyle}</div>
-            <div className="text-xs text-slate-400">Art Style</div>
+            <div className="text-lg font-bold text-white">Forest Tip</div>
+            <div className="text-xs text-slate-400 truncate max-w-[120px]">{project.forestTip || 'Nature Care'}</div>
           </div>
         </div>
       </div>
 
-      {/* Main Mode View */}
+      {/* Main Generator Mode */}
       {activeMode === 'ai-prompt' ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Prompt & Config (Left 8 cols) */}
+          {/* Form & Controls (Left 8 cols) */}
           <div className="lg:col-span-8 flex flex-col gap-5 bg-slate-900/80 border border-slate-800 rounded-3xl p-6">
             <div>
               <label className="text-sm font-bold text-white mb-1.5 flex items-center justify-between">
-                <span>Story Concept / Scenario Prompt</span>
-                <span className="text-xs text-purple-400 font-normal">Supports full story premises</span>
+                <span>Episode Story Premise & New Scenes</span>
+                <span className="text-xs text-purple-400">LiLo & Mozz Adventure Mode</span>
               </label>
               <textarea
                 rows={4}
                 value={promptText}
                 onChange={(e) => setPromptText(e.target.value)}
-                placeholder="Describe your cartoon idea... e.g. A tiny dragon and a clumsy wizard open a magical taco truck on Mars..."
+                placeholder="Describe today's forest adventure... e.g. LiLo and Mozz wake up and hear a tiny frog calling near the mossy pond. The stream is blocked by twigs, so they build a mini water channel..."
                 className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 rounded-2xl p-4 text-sm text-white placeholder:text-slate-500 outline-none resize-none transition"
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold text-slate-400 mb-1.5 block">Story Genre</label>
-                <select
-                  value={selectedGenre}
-                  onChange={(e) => setSelectedGenre(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none"
-                >
-                  <option value="comedy-adventure">Comedy & Adventure</option>
-                  <option value="sci-fi-futuristic">Sci-Fi & Space Exploration</option>
-                  <option value="mystery-detective">Mystery & Whodunnit</option>
-                  <option value="magical-fantasy">Magical Fantasy</option>
-                  <option value="educational-kids">Educational & Wholesome</option>
-                  <option value="action-superhero">Action Superhero</option>
-                </select>
+            {/* Target Episode Duration (2 to 20 Min) */}
+            <div>
+              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 block">
+                Target Episode Duration (2 to 20 Minutes)
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {EPISODE_DURATIONS.map((dur) => (
+                  <button
+                    key={dur.minutes}
+                    type="button"
+                    onClick={() => setSelectedDuration(dur.minutes)}
+                    className={`p-3 rounded-2xl text-left border transition flex flex-col gap-0.5 ${
+                      selectedDuration === dur.minutes
+                        ? 'bg-purple-950/60 border-purple-500 text-white font-bold ring-2 ring-purple-500/30'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-xs font-bold flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-purple-400" />
+                      <span>{dur.label}</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-normal">{dur.desc}</span>
+                  </button>
+                ))}
               </div>
+            </div>
 
-              <div>
-                <div className="flex justify-between text-xs text-slate-400 mb-1.5">
-                  <span className="font-semibold">Target Scene Count</span>
-                  <span className="font-bold text-purple-400">{sceneCount} Scenes</span>
-                </div>
-                <input
-                  type="range"
-                  min="2"
-                  max="6"
-                  value={sceneCount}
-                  onChange={(e) => setSceneCount(parseInt(e.target.value))}
-                  className="w-full accent-purple-500 cursor-pointer mt-2"
-                />
+            {/* Animal Friend Selector */}
+            <div>
+              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 block">
+                Featured Animal Friend
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {ANIMAL_FRIENDS.map((af) => (
+                  <button
+                    key={af.name}
+                    type="button"
+                    onClick={() => setSelectedAnimal(af)}
+                    className={`p-3 rounded-2xl text-left border transition flex items-center gap-3 ${
+                      selectedAnimal.name === af.name
+                        ? 'bg-emerald-950/50 border-emerald-500 text-white font-bold ring-2 ring-emerald-500/30'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-2xl">{af.icon}</span>
+                    <div className="overflow-hidden">
+                      <div className="text-xs font-bold truncate">{af.name}</div>
+                      <div className="text-[10px] text-slate-400 truncate">{af.species}</div>
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
 
             <button
-              onClick={handleGenerateAI}
+              onClick={handleGenerateEpisode}
               disabled={isGenerating}
-              className="mt-2 w-full py-4 bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-2xl shadow-xl shadow-purple-500/25 flex items-center justify-center gap-2 transition active:scale-98 disabled:opacity-50 text-sm"
+              className="mt-2 w-full py-4 bg-gradient-to-r from-emerald-600 via-purple-600 to-pink-600 hover:from-emerald-500 hover:to-pink-500 text-white font-black rounded-2xl shadow-xl shadow-purple-500/30 flex items-center justify-center gap-2 transition active:scale-98 disabled:opacity-50 text-sm"
             >
               {isGenerating ? (
                 <>
                   <RefreshCw className="w-5 h-5 animate-spin" />
-                  <span>Directing & Generating Cartoon Scenes...</span>
+                  <span>Directing {selectedDuration}-Minute LiLo & Mozz Episode...</span>
                 </>
               ) : (
                 <>
                   <Wand2 className="w-5 h-5" />
-                  <span>Generate Full Cartoon Storyboard</span>
+                  <span>Generate Full {selectedDuration}-Min Cartoon Episode</span>
                 </>
               )}
             </button>
           </div>
 
-          {/* Inspiration Ideas (Right 4 cols) */}
+          {/* Preset Inspirations (Right 4 cols) */}
           <div className="lg:col-span-4 flex flex-col gap-3">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">
-              Quick Inspiration Prompts
+              LiLo & Mozz Story Presets
             </h3>
-            {INSPIRATION_IDEAS.map((idea, idx) => (
+            {LILO_INSPIRATIONS.map((ins, idx) => (
               <div
                 key={idx}
                 onClick={() => {
-                  setPromptText(idea.prompt);
-                  setSelectedGenre(idea.genre);
+                  setPromptText(ins.prompt);
+                  setSelectedAnimal(ins.animal);
+                  setSelectedDuration(ins.duration);
                 }}
-                className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-purple-500/50 p-3.5 rounded-2xl cursor-pointer transition flex flex-col gap-1 group"
+                className="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-emerald-500/50 p-3.5 rounded-2xl cursor-pointer transition flex flex-col gap-1 group"
               >
-                <div className="font-bold text-xs text-purple-300 group-hover:text-purple-200">{idea.title}</div>
-                <div className="text-xs text-slate-400 line-clamp-2">{idea.prompt}</div>
+                <div className="font-bold text-xs text-emerald-300 group-hover:text-emerald-200">{ins.title}</div>
+                <div className="text-xs text-slate-400 line-clamp-2">{ins.prompt}</div>
+                <div className="text-[10px] text-purple-300 font-mono mt-1">Duration: {ins.duration} Min</div>
               </div>
             ))}
           </div>
         </div>
       ) : (
-        /* Screenplay Editor Mode */
+        /* Screenplay Mode */
         <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-base font-bold text-white">Screenplay Script Editor</h3>
               <p className="text-xs text-slate-400">
-                Format: <code className="text-purple-300">[SCENE 1: TITLE]</code> followed by <code className="text-pink-300">CHARACTER (emotion): dialogue text</code>
+                Format: <code className="text-purple-300">[SCENE 1: TITLE]</code> followed by <code className="text-pink-300">LILO (excited): ...</code> or <code className="text-amber-300">MOZZ (happy): ...</code>
               </p>
             </div>
             <button
               onClick={handleParseScreenplay}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-purple-500/25 transition"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-600 to-purple-600 hover:from-emerald-500 hover:to-purple-500 text-white text-xs font-bold rounded-xl shadow-lg transition"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Apply & Convert to Storyboard</span>
+              <span>Convert Script to Video Storyboard</span>
             </button>
           </div>
 
           <textarea
-            rows={14}
+            rows={16}
             value={screenplayDraft}
             onChange={(e) => setScreenplayDraft(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 rounded-2xl p-4 font-mono text-xs text-purple-200 outline-none resize-none leading-relaxed"
+            className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 rounded-2xl p-4 font-mono text-xs text-emerald-200 outline-none resize-none leading-relaxed"
           />
         </div>
       )}

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Download, Sparkles, FolderOpen, Plus, Settings, Film, Users, BookOpen, Clock, HardDrive, Check, Trash2 } from 'lucide-react';
 import { Project } from '../types/cartoon';
+import { LILO_DEFAULT_PROJECT } from '../data/liloMozzDefaults';
 import { STARTER_TEMPLATES } from '../data/templates';
+
 import { storageService, SavedProjectMeta } from '../services/storageService';
 
 interface HeaderProps {
@@ -215,21 +217,18 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
 
               <div className="border-t border-slate-800 pt-1.5 flex flex-col gap-1">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2">
-                  Presets
+                <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider px-2">
+                  LiLo & Mozz Presets
                 </div>
-                {STARTER_TEMPLATES.map((tmpl) => (
-                  <button
-                    key={tmpl.id}
-                    onClick={() => {
-                      onUpdateProject(() => tmpl);
-                      setShowProjectsMenu(false);
-                    }}
-                    className="w-full text-left px-2 py-1 text-xs rounded-lg hover:bg-purple-600/20 hover:text-purple-300 text-slate-400 transition"
-                  >
-                    Load preset: {tmpl.title}
-                  </button>
-                ))}
+                <button
+                  onClick={() => {
+                    onUpdateProject(() => LILO_DEFAULT_PROJECT);
+                    setShowProjectsMenu(false);
+                  }}
+                  className="w-full text-left px-2 py-1 text-xs rounded-lg hover:bg-emerald-600/20 hover:text-emerald-300 text-slate-300 font-semibold transition"
+                >
+                  🌸 LiLo & Mozz: The Lost Songbird (3 min)
+                </button>
               </div>
             </div>
           )}

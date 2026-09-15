@@ -1,4 +1,5 @@
 import { Project, AISettings } from '../types/cartoon';
+import { LILO_DEFAULT_PROJECT } from '../data/liloMozzDefaults';
 import { STARTER_TEMPLATES } from '../data/templates';
 
 const ACTIVE_PROJECT_KEY = 'cartoon_maker_active_project';
@@ -24,14 +25,14 @@ export const storageService = {
       const saved = localStorage.getItem(ACTIVE_PROJECT_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && parsed.characters && parsed.scenes) {
+        if (parsed && parsed.characters && parsed.scenes && (parsed.id.includes('lilo') || parsed.title.includes('LiLo'))) {
           return parsed;
         }
       }
     } catch (e) {
       console.warn('Error reading active project from localStorage:', e);
     }
-    return STARTER_TEMPLATES[0];
+    return LILO_DEFAULT_PROJECT;
   },
 
   /**

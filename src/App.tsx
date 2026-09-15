@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Project, AISettings, AspectRatio } from './types/cartoon';
+import { LILO_DEFAULT_PROJECT } from './data/liloMozzDefaults';
 import { STARTER_TEMPLATES } from './data/templates';
+
+
 import { storageService } from './services/storageService';
 import { Header } from './components/Header';
 import { ScriptWizard } from './components/script-wizard/ScriptWizard';
@@ -55,12 +58,12 @@ export const App: React.FC = () => {
   };
 
   const handleNewProject = () => {
-    if (confirm('Create a new blank cartoon project? Make sure to save or export your current cartoon if needed.')) {
+    if (confirm('Create a new LiLo & Mozz cartoon episode? Make sure to export your current project if you want to keep it.')) {
       const newP: Project = {
-        ...STARTER_TEMPLATES[0],
-        id: 'proj_' + Math.random().toString(36).substring(2, 9),
-        title: 'My New AI Cartoon',
-        synopsis: 'A brand new animated cartoon story',
+        ...LILO_DEFAULT_PROJECT,
+        id: 'lilo_ep_' + Date.now(),
+        title: 'LiLo & Mozz: New Forest Adventure',
+        synopsis: 'LiLo and Mozz wake up and set off into the woods to help a new animal friend',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

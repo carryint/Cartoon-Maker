@@ -10,6 +10,24 @@ export interface BackgroundPreset {
 
 export const BACKGROUND_PRESETS: BackgroundPreset[] = [
   {
+    id: 'forest-cottage',
+    name: "LiLo's Forest Cottage",
+    category: 'nature',
+    description: 'A cozy fairy-tale cottage surrounded by sunlit trees, blooming wildflowers, stone pathway, and dancing butterflies.',
+    svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+      <image href="/assets/lilo_mozz/forest_cottage_bg.jpg" width="1920" height="1080" preserveAspectRatio="xMidYMid slice"/>
+    </svg>`,
+  },
+  {
+    id: 'enchanted-forest',
+    name: 'Enchanted Wildflower Woods',
+    category: 'nature',
+    description: 'Vibrant fairy-tale forest with whimsical glowing mushrooms, sunbeams, and oversized colorful trees.',
+    svgData: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+      <image href="/assets/lilo_mozz/forest_cottage_bg.jpg" width="1920" height="1080" preserveAspectRatio="xMidYMid slice"/>
+    </svg>`,
+  },
+  {
     id: 'space-station',
     name: 'Cosmic Starship Deck',
     category: 'sci-fi',

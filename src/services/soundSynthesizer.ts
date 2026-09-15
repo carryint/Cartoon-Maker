@@ -2,7 +2,6 @@ import { SFXType, BGMGenre } from '../types/cartoon';
 
 class SoundSynthesizer {
   private ctx: AudioContext | null = null;
-  private bgmOscillators: OscillatorNode[] = [];
   private bgmGain: GainNode | null = null;
   private isBgmPlaying = false;
   private bgmInterval: number | null = null;
@@ -19,7 +18,7 @@ class SoundSynthesizer {
   }
 
   /**
-   * Play procedural Cartoon Sound Effects
+   * Play procedural Cartoon & Nature Sound Effects
    */
   public playSFX(type: SFXType, volume: number = 0.8): void {
     if (type === 'none') return;
@@ -28,8 +27,88 @@ class SoundSynthesizer {
       const now = ctx.currentTime;
 
       switch (type) {
+        case 'nature-birds': {
+          // Cheerful chirping forest birds
+          const birds = [2200, 2600, 3100, 2800];
+          birds.forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            const t = now + idx * 0.12;
+            osc.frequency.setValueAtTime(freq, t);
+            osc.frequency.exponentialRampToValueAtTime(freq + 400, t + 0.04);
+            osc.frequency.exponentialRampToValueAtTime(freq - 200, t + 0.09);
+
+            gain.gain.setValueAtTime(volume * 0.35, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.1);
+          });
+          break;
+        }
+
+        case 'river-stream': {
+          // Gentle babbling water stream
+          const bufferSize = ctx.sampleRate * 0.8;
+          const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+          }
+          const noise = ctx.createBufferSource();
+          noise.buffer = buffer;
+          const filter = ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(450, now);
+          const gain = ctx.createGain();
+          gain.gain.setValueAtTime(volume * 0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(ctx.destination);
+          noise.start(now);
+          break;
+        }
+
+        case 'cat-meow': {
+          // Cute cartoon kitten meow
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(550, now);
+          osc.frequency.exponentialRampToValueAtTime(850, now + 0.18);
+          osc.frequency.exponentialRampToValueAtTime(420, now + 0.45);
+
+          gain.gain.setValueAtTime(0.01, now);
+          gain.gain.linearRampToValueAtTime(volume * 0.5, now + 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.45);
+          break;
+        }
+
+        case 'cat-purr': {
+          // Gentle purr
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(32, now);
+          gain.gain.setValueAtTime(volume * 0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.6);
+          break;
+        }
+
         case 'boing': {
-          // Classic cartoon spring boing
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
           osc.type = 'triangle';
@@ -49,28 +128,23 @@ class SoundSynthesizer {
         }
 
         case 'whoosh': {
-          // Fast cartoon swoosh
           const bufferSize = ctx.sampleRate * 0.3;
           const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
           const data = buffer.getChannelData(0);
           for (let i = 0; i < bufferSize; i++) {
             data[i] = Math.random() * 2 - 1;
           }
-
           const noise = ctx.createBufferSource();
           noise.buffer = buffer;
-
           const filter = ctx.createBiquadFilter();
           filter.type = 'bandpass';
           filter.frequency.setValueAtTime(300, now);
           filter.frequency.exponentialRampToValueAtTime(2500, now + 0.15);
           filter.frequency.exponentialRampToValueAtTime(200, now + 0.3);
-
           const gain = ctx.createGain();
           gain.gain.setValueAtTime(0.01, now);
           gain.gain.linearRampToValueAtTime(volume * 0.8, now + 0.12);
           gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-
           noise.connect(filter);
           filter.connect(gain);
           gain.connect(ctx.destination);
@@ -79,7 +153,6 @@ class SoundSynthesizer {
         }
 
         case 'pop': {
-          // Cartoon bubble pop
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
           osc.type = 'sine';
@@ -98,7 +171,6 @@ class SoundSynthesizer {
         }
 
         case 'laser': {
-          // Sci-fi cartoon zap
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
           osc.type = 'sawtooth';
@@ -116,8 +188,7 @@ class SoundSynthesizer {
         }
 
         case 'fanfare': {
-          // Joyful brass chord
-          const freqs = [523.25, 659.25, 783.99, 1046.5]; // C major
+          const freqs = [523.25, 659.25, 783.99, 1046.5];
           freqs.forEach((freq, idx) => {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
@@ -135,26 +206,7 @@ class SoundSynthesizer {
           break;
         }
 
-        case 'punch': {
-          // Cartoon comic punch / impact
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(180, now);
-          osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
-
-          gain.gain.setValueAtTime(volume, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(now);
-          osc.stop(now + 0.2);
-          break;
-        }
-
         case 'sparkle': {
-          // Magical cartoon twinkle
           const notes = [1046.5, 1318.5, 1567.98, 2093.0];
           notes.forEach((f, i) => {
             const osc = ctx.createOscillator();
@@ -172,17 +224,29 @@ class SoundSynthesizer {
           break;
         }
 
+        case 'punch': {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(180, now);
+          osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+          gain.gain.setValueAtTime(volume, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.2);
+          break;
+        }
+
         case 'thunder': {
-          // Rumble
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
           osc.type = 'sawtooth';
           osc.frequency.setValueAtTime(60, now);
           osc.frequency.linearRampToValueAtTime(30, now + 0.8);
-
           gain.gain.setValueAtTime(volume * 0.6, now);
           gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
-
           osc.connect(gain);
           gain.connect(ctx.destination);
           osc.start(now);
@@ -214,48 +278,53 @@ class SoundSynthesizer {
       this.bgmGain.connect(ctx.destination);
 
       let step = 0;
-      // Melody patterns depending on genre
       const chords: Record<BGMGenre, number[][]> = {
+        'lilo-forest-morning': [
+          [261.63, 329.63, 392.0, 523.25], // C major harp
+          [349.23, 440.0, 523.25, 659.25], // F major7
+          [293.66, 369.99, 440.0, 587.33], // D minor7
+          [392.0, 493.88, 587.33, 783.99], // G major
+        ],
         'playful-adventure': [
-          [261.63, 329.63, 392.0], // C
-          [349.23, 440.0, 523.25], // F
-          [392.0, 493.88, 587.33], // G
-          [261.63, 329.63, 392.0], // C
+          [261.63, 329.63, 392.0],
+          [349.23, 440.0, 523.25],
+          [392.0, 493.88, 587.33],
+          [261.63, 329.63, 392.0],
         ],
         'comedy-mischief': [
-          [293.66, 349.23, 440.0], // Dm
-          [329.63, 392.0, 493.88], // Em
-          [349.23, 440.0, 523.25], // F
-          [440.0, 554.37, 659.25], // A
+          [293.66, 349.23, 440.0],
+          [329.63, 392.0, 493.88],
+          [349.23, 440.0, 523.25],
+          [440.0, 554.37, 659.25],
         ],
         'epic-heroic': [
-          [220.0, 261.63, 329.63], // Am
-          [349.23, 440.0, 523.25], // F
-          [261.63, 329.63, 392.0], // C
-          [392.0, 493.88, 587.33], // G
+          [220.0, 261.63, 329.63],
+          [349.23, 440.0, 523.25],
+          [261.63, 329.63, 392.0],
+          [392.0, 493.88, 587.33],
         ],
         'spooky-mystery': [
-          [220.0, 261.63, 311.13], // A dim
-          [233.08, 277.18, 349.23], // Bb
-          [196.0, 246.94, 293.66], // G
-          [220.0, 261.63, 329.63], // Am
+          [220.0, 261.63, 311.13],
+          [233.08, 277.18, 349.23],
+          [196.0, 246.94, 293.66],
+          [220.0, 261.63, 329.63],
         ],
         'chill-lofi': [
-          [261.63, 329.63, 392.0, 493.88], // Cmaj7
-          [220.0, 261.63, 329.63, 392.0],  // Am7
-          [293.66, 349.23, 440.0, 523.25], // Dm7
-          [392.0, 493.88, 587.33, 698.46], // G7
+          [261.63, 329.63, 392.0, 493.88],
+          [220.0, 261.63, 329.63, 392.0],
+          [293.66, 349.23, 440.0, 523.25],
+          [392.0, 493.88, 587.33, 698.46],
         ],
         'action-rush': [
-          [164.81, 196.0, 246.94], // E5
-          [174.61, 220.0, 261.63], // F5
-          [196.0, 246.94, 293.66], // G5
-          [164.81, 196.0, 246.94], // E5
+          [164.81, 196.0, 246.94],
+          [174.61, 220.0, 261.63],
+          [196.0, 246.94, 293.66],
+          [164.81, 196.0, 246.94],
         ],
         'none': [],
       };
 
-      const pattern = chords[genre] || chords['playful-adventure'];
+      const pattern = chords[genre] || chords['lilo-forest-morning'];
 
       const playChord = () => {
         if (!this.isBgmPlaying || !this.bgmGain) return;
@@ -265,35 +334,23 @@ class SoundSynthesizer {
         currentChord.forEach((f) => {
           const osc = ctx.createOscillator();
           const noteGain = ctx.createGain();
-          osc.type = genre === 'chill-lofi' ? 'sine' : 'triangle';
+          osc.type = genre === 'lilo-forest-morning' ? 'sine' : 'triangle';
           osc.frequency.setValueAtTime(f, now);
 
-          noteGain.gain.setValueAtTime(0.08, now);
-          noteGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+          noteGain.gain.setValueAtTime(0.07, now);
+          noteGain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
 
           osc.connect(noteGain);
           noteGain.connect(this.bgmGain!);
           osc.start(now);
-          osc.stop(now + 0.48);
+          osc.stop(now + 0.68);
         });
-
-        // Add a soft percussion tap
-        const clickOsc = ctx.createOscillator();
-        const clickGain = ctx.createGain();
-        clickOsc.type = 'square';
-        clickOsc.frequency.setValueAtTime(step % 2 === 0 ? 120 : 240, now);
-        clickGain.gain.setValueAtTime(0.05, now);
-        clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
-        clickOsc.connect(clickGain);
-        clickGain.connect(this.bgmGain!);
-        clickOsc.start(now);
-        clickOsc.stop(now + 0.08);
 
         step++;
       };
 
       playChord();
-      this.bgmInterval = window.setInterval(playChord, 500);
+      this.bgmInterval = window.setInterval(playChord, 600);
     } catch (e) {
       console.warn('BGM start error:', e);
     }

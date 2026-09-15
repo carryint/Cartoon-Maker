@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Copy, ArrowLeft, ArrowRight, Volume2, Film, Sparkles, Camera, FastForward, Play, Music } from 'lucide-react';
+import { Plus, Trash2, Copy, ArrowLeft, ArrowRight, Volume2, Film, Sparkles, Trees, Play } from 'lucide-react';
 import { Project, Scene, DialogueLine, CameraAngle, TransitionType, SFXType, CharacterEmotion } from '../../types/cartoon';
 import { BACKGROUND_PRESETS, getBackgroundSvgUrl } from '../../services/backgroundGenerator';
 import { soundSynthesizer } from '../../services/soundSynthesizer';
@@ -12,40 +12,43 @@ interface StoryboardDirectorProps {
 }
 
 const CAMERA_ANGLES: { id: CameraAngle; label: string }[] = [
-  { id: 'wide-shot', label: 'Wide Shot (Full Stage)' },
+  { id: 'wide-shot', label: 'Wide Shot (Forest Stage)' },
   { id: 'medium-shot', label: 'Medium Shot (Waist Up)' },
   { id: 'close-up', label: 'Close-Up (Expressive Face)' },
-  { id: 'dynamic-pan', label: 'Dynamic Pan (Action Zoom)' },
-  { id: 'dutch-angle', label: 'Dutch Angle (Tilted Drama)' },
+  { id: 'dynamic-pan', label: 'Dynamic Pan (Action Exploration)' },
+  { id: 'dutch-angle', label: 'Dutch Angle (Dramatic Angle)' },
 ];
 
 const TRANSITIONS: { id: TransitionType; label: string }[] = [
   { id: 'fade', label: 'Fade Transition' },
-  { id: 'zoom-in', label: 'Zoom Punch In' },
-  { id: 'slide-left', label: 'Slide Pan Left' },
+  { id: 'zoom-in', label: 'Zoom In' },
+  { id: 'slide-left', label: 'Slide Left' },
   { id: 'bounce-cut', label: 'Cartoon Bounce Cut' },
   { id: 'comic-wipe', label: 'Comic Book Wipe' },
 ];
 
 const SFX_OPTIONS: { id: SFXType; label: string; icon: string }[] = [
   { id: 'none', label: 'No Sound FX', icon: '🔇' },
-  { id: 'boing', label: 'Cartoon Spring Boing', icon: '🌀' },
-  { id: 'whoosh', label: 'Speed Whoosh', icon: '💨' },
+  { id: 'nature-birds', label: 'Forest Birds Chirping', icon: '🐦' },
+  { id: 'river-stream', label: 'Gentle River Stream', icon: '🌊' },
+  { id: 'cat-meow', label: 'Mozz Kitten Meow', icon: '🐱' },
+  { id: 'cat-purr', label: 'Mozz Gentle Purr', icon: '🐾' },
+  { id: 'sparkle', label: 'Magic Nature Sparkle', icon: '✨' },
+  { id: 'fanfare', label: 'Celebration Fanfare', icon: '🎺' },
+  { id: 'boing', label: 'Cartoon Boing', icon: '🌀' },
   { id: 'pop', label: 'Bubble Pop', icon: '🫧' },
-  { id: 'laser', label: 'Sci-Fi Laser', icon: '⚡' },
-  { id: 'fanfare', label: 'Victory Fanfare', icon: '🎺' },
-  { id: 'sparkle', label: 'Magic Sparkle', icon: '✨' },
-  { id: 'punch', label: 'Comic Punch', icon: '💥' },
-  { id: 'thunder', label: 'Dramatic Thunder', icon: '⛈️' },
+  { id: 'whoosh', label: 'Speed Whoosh', icon: '💨' },
+  { id: 'thunder', label: 'Forest Thunder', icon: '⛈️' },
 ];
 
 const PARTICLE_OPTIONS = [
   { id: 'none', label: 'No Particles' },
-  { id: 'stars', label: 'Twinkling Stars ✨' },
-  { id: 'bubbles', label: 'Floating Bubbles 🫧' },
-  { id: 'speed-lines', label: 'Action Speed Lines ⚡' },
-  { id: 'hearts', label: 'Cute Hearts 💕' },
-  { id: 'rain', label: 'Cyberpunk Rain 🌧️' },
+  { id: 'leaves', label: 'Falling Forest Leaves 🍃' },
+  { id: 'butterflies', label: 'Dancing Butterflies 🦋' },
+  { id: 'stars', label: 'Twinkling Sunbeams & Stars ✨' },
+  { id: 'hearts', label: 'Heartfelt Love & Joy 💕' },
+  { id: 'bubbles', label: 'Stream Bubbles 🫧' },
+  { id: 'rain', label: 'Gentle Forest Rain 🌧️' },
 ];
 
 export const StoryboardDirector: React.FC<StoryboardDirectorProps> = ({
@@ -69,26 +72,27 @@ export const StoryboardDirector: React.FC<StoryboardDirectorProps> = ({
     const newScene: Scene = {
       id: 'scene_' + Math.random().toString(36).substring(2, 8),
       sceneNumber: newIndex,
-      title: `Scene ${newIndex}: Next Event`,
-      visualPrompt: 'Exciting animated cartoon scene',
-      backgroundUrl: BACKGROUND_PRESETS[newIndex % BACKGROUND_PRESETS.length].id,
-      cameraAngle: 'wide-shot',
+      act: 'Act 2: Animal Friend in Need',
+      title: `Scene ${newIndex}: Forest Discovery`,
+      visualPrompt: 'LiLo and Mozz exploring along the lush green moss path',
+      backgroundUrl: 'forest-cottage',
+      cameraAngle: 'medium-shot',
       transition: 'fade',
-      duration: 7.0,
-      characters: project.characters.map(c => c.id),
+      duration: 8.5,
+      characters: ['char_lilo', 'char_mozz'],
       dialogues: [
         {
           id: 'dlg_' + Math.random().toString(36).substring(2, 8),
-          characterId: project.characters[0]?.id || 'char_1',
-          text: 'What should we do next?',
-          emotion: 'happy',
+          characterId: 'char_lilo',
+          text: 'Look over here, Mozz! The forest has another wonderful surprise!',
+          emotion: 'excited',
           startTime: 0.5,
-          duration: 3.0,
+          duration: 3.5,
         }
       ],
-      sfx: 'pop',
+      sfx: 'nature-birds',
       sfxTime: 1.0,
-      particleEffect: 'stars',
+      particleEffect: 'leaves',
     };
 
     onUpdateProject(prev => ({
@@ -148,16 +152,16 @@ export const StoryboardDirector: React.FC<StoryboardDirectorProps> = ({
   const handleAddDialogueLine = (sceneId: string) => {
     const newDlg: DialogueLine = {
       id: 'dlg_' + Math.random().toString(36).substring(2, 8),
-      characterId: project.characters[0]?.id || 'char_1',
-      text: 'Here is a new line of dialogue!',
+      characterId: activeScene.dialogues.length % 2 === 0 ? 'char_lilo' : 'char_mozz',
+      text: 'What should we do next to help the forest?',
       emotion: 'happy',
-      startTime: (activeScene.dialogues.length * 3.2),
-      duration: 3.0,
+      startTime: (activeScene.dialogues.length * 3.6),
+      duration: 3.5,
     };
 
     updateScene(sceneId, {
       dialogues: [...activeScene.dialogues, newDlg],
-      duration: Math.max(activeScene.duration, (activeScene.dialogues.length + 1) * 3.5)
+      duration: Math.max(activeScene.duration, (activeScene.dialogues.length + 1) * 4.0)
     });
   };
 
@@ -176,14 +180,14 @@ export const StoryboardDirector: React.FC<StoryboardDirectorProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Film className="w-5 h-5 text-purple-400" />
-            <h2 className="text-lg font-bold text-white">Scene Storyboard Board</h2>
+            <h2 className="text-lg font-bold text-white">LiLo & Mozz Episode Storyboard</h2>
           </div>
           <button
             onClick={handleAddScene}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-500/25 transition"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-purple-600 hover:from-emerald-500 hover:to-purple-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-500/25 transition"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Add New Scene</span>
+            <span>Add Scene</span>
           </button>
         </div>
 
@@ -191,7 +195,7 @@ export const StoryboardDirector: React.FC<StoryboardDirectorProps> = ({
         <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-thin">
           {project.scenes.map((scene, idx) => {
             const isSelected = idx === activeSceneIndex;
-            const bgSvg = getBackgroundSvgUrl(scene.backgroundUrl || 'space-station');
+            const bgSvg = getBackgroundSvgUrl(scene.backgroundUrl || 'forest-cottage');
 
             return (
               <div
@@ -205,7 +209,7 @@ export const StoryboardDirector: React.FC<StoryboardDirectorProps> = ({
               >
                 <div className="w-full h-24 rounded-xl overflow-hidden bg-slate-950 relative">
                   <img src={bgSvg} alt={scene.title} className="w-full h-full object-cover" />
-                  <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-md bg-black/70 text-[10px] font-bold text-purple-300">
+                  <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-md bg-black/70 text-[10px] font-bold text-emerald-300">
                     #{scene.sceneNumber}
                   </div>
                   <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-black/70 text-[10px] text-slate-300">
@@ -215,8 +219,8 @@ export const StoryboardDirector: React.FC<StoryboardDirectorProps> = ({
 
                 <div className="flex flex-col gap-0.5">
                   <div className="text-xs font-bold text-white truncate">{scene.title}</div>
-                  <div className="text-[10px] text-slate-400 truncate">
-                    {scene.dialogues.length} lines • {scene.cameraAngle}
+                  <div className="text-[10px] text-purple-300 truncate">
+                    {scene.act || `Scene ${scene.sceneNumber}`}
                   </div>
                 </div>
               </div>
@@ -227,12 +231,12 @@ export const StoryboardDirector: React.FC<StoryboardDirectorProps> = ({
 
       {/* Main Selected Scene Inspector */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Scene Background & Visual Settings (5 cols) */}
+        {/* Left Column: Scene Visuals & Story Act (5 cols) */}
         <div className="lg:col-span-5 flex flex-col gap-4 bg-slate-900/80 border border-slate-800 rounded-3xl p-5">
           {/* Scene Header & Controls */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-purple-600 text-white font-bold text-xs flex items-center justify-center">
+              <span className="w-6 h-6 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center">
                 {activeScene.sceneNumber}
               </span>
               <input
@@ -279,42 +283,36 @@ export const StoryboardDirector: React.FC<StoryboardDirectorProps> = ({
             </div>
           </div>
 
+          {/* Act Badge Selector */}
+          <div>
+            <label className="text-xs font-semibold text-slate-400 mb-1 block">Story Act</label>
+            <select
+              value={activeScene.act || 'Act 1: Morning Exploration'}
+              onChange={(e) => updateScene(activeScene.id, { act: e.target.value as any })}
+              className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 rounded-xl px-2.5 py-1.5 text-xs text-emerald-300 font-bold outline-none"
+            >
+              <option value="Act 1: Morning Exploration">Act 1: Morning Exploration</option>
+              <option value="Act 2: Animal Friend in Need">Act 2: Animal Friend in Need</option>
+              <option value="Act 3: Nature Solution & Rescue">Act 3: Nature Solution & Rescue</option>
+              <option value="Act 4: Forest Tip & Celebration">Act 4: Forest Tip & Celebration</option>
+            </select>
+          </div>
+
           {/* Background Visual Box */}
           <div className="w-full h-44 rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 relative group">
             <img
-              src={getBackgroundSvgUrl(activeScene.backgroundUrl || 'space-station')}
+              src={getBackgroundSvgUrl(activeScene.backgroundUrl || 'forest-cottage')}
               alt={activeScene.title}
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition backdrop-blur-xs">
               <button
                 onClick={() => onPreviewScene(activeSceneIndex)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow-lg"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg"
               >
                 <Play className="w-3.5 h-3.5" />
-                <span>Play This Scene</span>
+                <span>Play Scene</span>
               </button>
-            </div>
-          </div>
-
-          {/* Background Preset Selector */}
-          <div>
-            <label className="text-xs font-semibold text-slate-400 mb-1.5 block">Background Environment</label>
-            <div className="grid grid-cols-2 gap-2">
-              {BACKGROUND_PRESETS.map((bg) => (
-                <button
-                  key={bg.id}
-                  onClick={() => updateScene(activeScene.id, { backgroundUrl: bg.id })}
-                  className={`p-2 rounded-xl text-left border text-xs flex flex-col gap-0.5 transition ${
-                    activeScene.backgroundUrl === bg.id
-                      ? 'bg-purple-950/60 border-purple-500 text-purple-200 font-bold'
-                      : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <span className="truncate">{bg.name}</span>
-                  <span className="text-[10px] text-slate-500 capitalize">{bg.category}</span>
-                </button>
-              ))}
             </div>
           </div>
 
@@ -334,7 +332,7 @@ export const StoryboardDirector: React.FC<StoryboardDirectorProps> = ({
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-400 mb-1 block">Transition Effect</label>
+              <label className="text-xs font-semibold text-slate-400 mb-1 block">Transition</label>
               <select
                 value={activeScene.transition}
                 onChange={(e) => updateScene(activeScene.id, { transition: e.target.value as TransitionType })}
@@ -351,7 +349,7 @@ export const StoryboardDirector: React.FC<StoryboardDirectorProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-slate-400">Cartoon Sound FX</label>
+                <label className="text-xs font-semibold text-slate-400">Nature / Cartoon SFX</label>
                 {activeScene.sfx !== 'none' && (
                   <button
                     onClick={() => soundSynthesizer.playSFX(activeScene.sfx)}
@@ -373,9 +371,9 @@ export const StoryboardDirector: React.FC<StoryboardDirectorProps> = ({
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-400 mb-1 block">Particle Atmosphere</label>
+              <label className="text-xs font-semibold text-slate-400 mb-1 block">Forest Atmosphere</label>
               <select
-                value={activeScene.particleEffect || 'stars'}
+                value={activeScene.particleEffect || 'leaves'}
                 onChange={(e) => updateScene(activeScene.id, { particleEffect: e.target.value as any })}
                 className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none"
               >
@@ -390,30 +388,30 @@ export const StoryboardDirector: React.FC<StoryboardDirectorProps> = ({
           <div>
             <div className="flex justify-between text-xs text-slate-400 mb-1">
               <span>Scene Duration</span>
-              <span className="font-bold text-purple-400">{activeScene.duration} seconds</span>
+              <span className="font-bold text-emerald-400">{activeScene.duration}s</span>
             </div>
             <input
               type="range"
-              min="3"
-              max="15"
+              min="4"
+              max="20"
               step="0.5"
               value={activeScene.duration}
               onChange={(e) => updateScene(activeScene.id, { duration: parseFloat(e.target.value) })}
-              className="w-full accent-purple-500 cursor-pointer"
+              className="w-full accent-emerald-500 cursor-pointer"
             />
           </div>
         </div>
 
-        {/* Right Column: Dialogue Scripting & Character Expressions (7 cols) */}
+        {/* Right Column: LiLo & Mozz Dialogue Scripting (7 cols) */}
         <div className="lg:col-span-7 flex flex-col gap-4 bg-slate-900/80 border border-slate-800 rounded-3xl p-5">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-purple-400" />
-              <span>Scene Dialogues & Character Lip-Sync</span>
+              <Sparkles className="w-4 h-4 text-emerald-400" />
+              <span>Scene Dialogues (LiLo & Mozz)</span>
             </h3>
             <button
               onClick={() => handleAddDialogueLine(activeScene.id)}
-              className="flex items-center gap-1 px-3 py-1 bg-purple-600/30 hover:bg-purple-600 text-purple-200 hover:text-white rounded-lg border border-purple-500/40 text-xs font-semibold transition"
+              className="flex items-center gap-1 px-3 py-1 bg-emerald-600/30 hover:bg-emerald-600 text-emerald-200 hover:text-white rounded-lg border border-emerald-500/40 text-xs font-semibold transition"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Dialogue Line</span>
@@ -423,15 +421,15 @@ export const StoryboardDirector: React.FC<StoryboardDirectorProps> = ({
           <div className="flex flex-col gap-3">
             {activeScene.dialogues.map((dlg, dIdx) => {
               const char = project.characters.find(c => c.id === dlg.characterId) || project.characters[0];
-              const avatarImg = char?.emotions[dlg.emotion] || char?.avatarUrl;
+              const avatarImg = char?.avatarUrl || char?.customAvatarUrl;
 
               return (
                 <div
                   key={dlg.id}
                   className="bg-slate-950/70 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 transition hover:border-slate-700"
                 >
-                  {/* Character Avatar thumbnail */}
-                  <div className="w-12 h-12 rounded-xl bg-slate-900 p-1 border border-slate-800 shrink-0 overflow-hidden">
+                  {/* Avatar thumbnail */}
+                  <div className="w-12 h-12 rounded-xl bg-slate-900 p-1 border border-slate-800 shrink-0 overflow-hidden flex items-center justify-center">
                     {avatarImg && <img src={avatarImg} alt={char?.name} className="w-full h-full object-contain" />}
                   </div>
 
@@ -460,7 +458,7 @@ export const StoryboardDirector: React.FC<StoryboardDirectorProps> = ({
                       }}
                       className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-[11px] text-purple-300 font-medium outline-none capitalize"
                     >
-                      {['happy', 'excited', 'surprised', 'cool', 'thinking', 'neutral', 'angry', 'sad', 'scared'].map(emo => (
+                      {['happy', 'excited', 'surprised', 'winking', 'thinking', 'neutral', 'angry', 'sad', 'scared'].map(emo => (
                         <option key={emo} value={emo}>{emo}</option>
                       ))}
                     </select>

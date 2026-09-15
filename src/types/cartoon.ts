@@ -27,13 +27,18 @@ export type CharacterEmotion =
   | 'happy' 
   | 'excited' 
   | 'surprised' 
+  | 'winking'
+  | 'thinking' 
   | 'angry' 
   | 'sad' 
-  | 'thinking' 
   | 'scared' 
   | 'cool';
 
 export type SFXType = 
+  | 'nature-birds'
+  | 'river-stream'
+  | 'cat-meow'
+  | 'cat-purr'
   | 'boing' 
   | 'whoosh' 
   | 'pop' 
@@ -44,9 +49,11 @@ export type SFXType =
   | 'punch' 
   | 'thunder' 
   | 'sparkle' 
+  | 'footsteps'
   | 'none';
 
 export type BGMGenre = 
+  | 'lilo-forest-morning'
   | 'playful-adventure' 
   | 'comedy-mischief' 
   | 'epic-heroic' 
@@ -56,6 +63,22 @@ export type BGMGenre =
   | 'none';
 
 export type AspectRatio = '16:9' | '9:16' | '1:1';
+
+export interface CharacterOutfit {
+  id: string;
+  name: string;
+  description: string;
+  thumbnailUrl?: string;
+}
+
+export interface CharacterBoard {
+  boardImageUrl: string;
+  closeUpImageUrl?: string;
+  colorPalette: string[];
+  personalityTraits: string[];
+  outfits: CharacterOutfit[];
+  angles: string[];
+}
 
 export interface Character {
   id: string;
@@ -72,6 +95,8 @@ export interface Character {
   customAvatarUrl?: string;
   avatarUrl?: string;
   personality: string;
+  selectedOutfit?: string;
+  characterBoard?: CharacterBoard;
   emotions: Record<CharacterEmotion, string>; // emotion -> avatar image URL / SVG data
 }
 
@@ -89,6 +114,7 @@ export interface Scene {
   id: string;
   sceneNumber: number;
   title: string;
+  act?: 'Act 1: Morning Exploration' | 'Act 2: Animal Friend in Need' | 'Act 3: Nature Solution & Rescue' | 'Act 4: Forest Tip & Celebration';
   visualPrompt: string;
   backgroundUrl?: string;
   backgroundColor?: string;
@@ -99,14 +125,26 @@ export interface Scene {
   dialogues: DialogueLine[];
   sfx: SFXType;
   sfxTime?: number;
-  particleEffect?: 'stars' | 'bubbles' | 'dust' | 'speed-lines' | 'hearts' | 'rain' | 'none';
+  particleEffect?: 'stars' | 'bubbles' | 'dust' | 'speed-lines' | 'hearts' | 'rain' | 'leaves' | 'butterflies' | 'none';
+  forestLessonNote?: string;
   customNotes?: string;
+}
+
+export interface AnimalFriend {
+  name: string;
+  species: string;
+  problem: string;
+  lesson: string;
+  icon: string;
 }
 
 export interface Project {
   id: string;
   title: string;
   synopsis: string;
+  targetDurationMinutes?: number; // 2 to 20
+  forestTip?: string; // Signature Forest Tip
+  animalFriend?: AnimalFriend;
   artStyle: ArtStyle;
   aspectRatio: AspectRatio;
   fps: number;
