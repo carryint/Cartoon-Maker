@@ -318,8 +318,15 @@ function shadeHex(hex: string, amount: number): string {
   return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
 }
 
+import { createLiveRig, drawLive3DCharacter, LiveCharacterRig } from './live3DCharacterEngine';
+
 /**
- * Draw an animated character on the canvas using their board image
+ * Cache of initialized live rigs
+ */
+const activeRigs = new Map<string, LiveCharacterRig>();
+
+/**
+ * Draw an animated live 3D character on the canvas using their board image
  */
 export function drawCharacter(
   ctx: CanvasRenderingContext2D,
@@ -330,38 +337,33 @@ export function drawCharacter(
   height: number,
   time: number,
   isTalking: boolean,
-  emotion: string
+  emotion: string,
+  charId: string = 'default'
 ): void {
-  ctx.save();
-
-  // Breathing animation
-  const breathe = Math.sin(time * 1.2) * 2;
-  // Talking bob
-  const talkBob = isTalking ? Math.sin(time * 12) * 3 : 0;
-  // Emotion-based scale
-  let scaleX = 1, scaleY = 1;
-  if (emotion === 'excited') { scaleX = 1 + Math.abs(Math.sin(time * 4)) * 0.04; }
-  if (emotion === 'scared') { scaleX = 1 + Math.sin(time * 8) * 0.02; }
-
-  ctx.translate(x + width / 2, y + height / 2);
-  ctx.scale(scaleX, scaleY);
-  ctx.translate(-(width / 2), -(height / 2));
-
-  // Shadow
-  ctx.shadowColor = 'rgba(0,0,0,0.3)';
-  ctx.shadowBlur = 20;
-  ctx.shadowOffsetY = 15;
-
-  ctx.drawImage(img, 0, breathe + talkBob, width, height);
-
-  // Emotion overlay glow
-  if (emotion === 'happy' || emotion === 'excited') {
-    const glow = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width * 0.6);
-    glow.addColorStop(0, 'rgba(255,255,100,0)');
-    glow.addColorStop(1, 'rgba(255,255,100,0.08)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, width, height);
+  let rig = activeRigs.get(charId);
+  if (!rig || rig.sourceImage.src !== img.src) {
+    rig = {
+      id: charId,
+      sourceImage: img,
+      hasTransparentBg: true,
+      aspectRatio: (img.naturalWidth && img.naturalHeight) ? img.naturalWidth / img.naturalHeight : 0.8,
+      headCenterRatio: { x: 0.5, y: 0.28 },
+      bodyCenterRatio: { x: 0.5, y: 0.65 },
+      eyeLevelRatio: 0.26,
+      mouthLevelRatio: 0.36,
+    };
+    activeRigs.set(charId, rig);
+    // Background auto-process cutout & 3D rig
+    createLiveRig(img.src, charId).then((fullRig) => {
+      activeRigs.set(charId, fullRig);
+    });
   }
 
-  ctx.restore();
+  drawLive3DCharacter(ctx, rig, x, y, width, height, {
+    time,
+    isTalking,
+    emotion,
+    action: isTalking ? 'talk' : 'idle',
+  });
 }
+

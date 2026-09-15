@@ -9,7 +9,7 @@ import { drawBackground, drawCharacter } from './backgroundEngine';
 //  Script parsing → scene preparation → canvas rendering → recording
 // ============================================================
 
-const STORAGE_KEY = 'aivideo_project_v1';
+const STORAGE_KEY = 'aivideo_project_v3';
 
 export function saveProject(project: Project): void {
   try {
@@ -231,7 +231,7 @@ function renderSceneFrame(
     const emotion = activeDial?.characterId === char.id ? (activeDial.emotion || 'neutral') : 'neutral';
 
     if (img && img.complete && img.naturalWidth > 0) {
-      drawCharacter(ctx, img, cx, cy, charW, charH, time, isTalking, emotion);
+      drawCharacter(ctx, img, cx, cy, charW, charH, time, isTalking, emotion, char.id);
     } else {
       // Fallback placeholder
       drawCharacterPlaceholder(ctx, char, cx, cy, charW, charH, time, isTalking);
