@@ -64,6 +64,31 @@ export type BGMGenre =
 
 export type AspectRatio = '16:9' | '9:16' | '1:1';
 
+export type SupportedLanguage = 
+  | 'en-US' 
+  | 'ml-IN' 
+  | 'hi-IN' 
+  | 'ta-IN' 
+  | 'ar-SA' 
+  | 'es-ES' 
+  | 'fr-FR' 
+  | 'de-DE' 
+  | 'ja-JP' 
+  | 'zh-CN';
+
+export type VoicePersona = 
+  | 'baby-toddler-girl' 
+  | 'playful-cat' 
+  | 'sweet-girl' 
+  | 'energetic-girl' 
+  | 'gentle-girl' 
+  | 'funny-boy' 
+  | 'young-boy' 
+  | 'friendly-adult' 
+  | 'wise-elderly' 
+  | 'chirpy-creature' 
+  | 'deep-creature';
+
 export interface CharacterOutfit {
   id: string;
   name: string;
@@ -88,6 +113,8 @@ export interface Character {
   primaryColor: string;
   secondaryColor: string;
   voiceGender: 'male' | 'female' | 'robot' | 'child' | 'creature';
+  voicePersona?: VoicePersona;
+  language?: SupportedLanguage;
   voicePitch: number; // 0.5 to 1.8
   voiceRate: number;  // 0.7 to 1.4
   avatarPrompt: string;
@@ -142,6 +169,7 @@ export interface Project {
   id: string;
   title: string;
   synopsis: string;
+  language?: SupportedLanguage;
   targetDurationMinutes?: number; // 2 to 20
   forestTip?: string; // Signature Forest Tip
   animalFriend?: AnimalFriend;

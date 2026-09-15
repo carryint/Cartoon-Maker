@@ -1,14 +1,14 @@
 import React, { useState, useRef } from 'react';
-import { Play, Pause, RotateCcw, Download, Sparkles, Wand2, FileText, Film, Clock, Trees, Eye, Volume2, CheckCircle2, RefreshCw, Layers, Plus, Trash2 } from 'lucide-react';
+import { Play, Pause, RotateCcw, Download, Sparkles, Wand2, FileText, Film, Clock, Trees, Eye, Volume2, CheckCircle2, RefreshCw, Layers, Plus, Trash2, Globe2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { Project, Scene, DialogueLine, AISettings, AnimalFriend, AspectRatio } from '../../types/cartoon';
+import { Project, Scene, DialogueLine, AISettings, AnimalFriend, AspectRatio, SupportedLanguage } from '../../types/cartoon';
 import { ANIMAL_FRIENDS } from '../../data/liloMozzDefaults';
 import { generateLiLoMozzEpisode } from '../../services/liloMozzEngine';
 import { parseUserScreenplay } from '../../services/aiPipeline';
 import { VideoPlayerCanvas, VideoPlayerRef } from '../player/VideoPlayerCanvas';
 import { MultiTrackTimeline } from '../timeline/MultiTrackTimeline';
 import { CharacterStudio } from '../character-studio/CharacterStudio';
-import { speechSynthesizer } from '../../services/speechSynthesizer';
+import { speechSynthesizer, SUPPORTED_LANGUAGES } from '../../services/speechSynthesizer';
 
 interface UnifiedStudioProps {
   project: Project;
@@ -37,7 +37,20 @@ export const UnifiedStudio: React.FC<UnifiedStudioProps> = ({
   const [promptText, setPromptText] = useState(project.synopsis || '');
   const [selectedDuration, setSelectedDuration] = useState<number>(project.targetDurationMinutes || 3);
   const [selectedAnimal, setSelectedAnimal] = useState<AnimalFriend>(project.animalFriend || ANIMAL_FRIENDS[0]);
+  const [episodeLang, setEpisodeLang] = useState<SupportedLanguage>(project.language || 'en-US');
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleSetLanguage = (lang: SupportedLanguage) => {
+    setEpisodeLang(lang);
+    onUpdateProject(prev => ({
+      ...prev,
+      language: lang,
+      characters: prev.characters.map(c => ({
+        ...c,
+        language: lang,
+      }))
+    }));
+  };
 
   // Video Player & Export state
   const playerRef = useRef<VideoPlayerRef>(null);
@@ -73,6 +86,7 @@ export const UnifiedStudio: React.FC<UnifiedStudioProps> = ({
       const newProject = await generateLiLoMozzEpisode({
         prompt: promptText || `LiLo and Mozz help ${selectedAnimal.name} in the forest`,
         durationMinutes: selectedDuration,
+        language: episodeLang,
         selectedAnimal,
         selectedOutfitLiLo: project.characters.find(c => c.id === 'char_lilo')?.selectedOutfit,
         selectedOutfitMozz: project.characters.find(c => c.id === 'char_mozz')?.selectedOutfit,
@@ -268,7 +282,24 @@ export const UnifiedStudio: React.FC<UnifiedStudioProps> = ({
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          {/* Episode Language Selector */}
+          <div className="flex items-center gap-1.5 bg-slate-950 px-2.5 py-1.5 rounded-xl border border-slate-800">
+            <Globe2 className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+            <select
+              value={episodeLang}
+              onChange={(e) => handleSetLanguage(e.target.value as SupportedLanguage)}
+              className="bg-transparent text-xs text-slate-200 outline-none cursor-pointer font-medium"
+              title="Episode Language & Voice Track"
+            >
+              {SUPPORTED_LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code} className="bg-slate-900 text-white">
+                  {l.flag} {l.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <button
             onClick={handleDownloadVideo}
             disabled={isRecording}
@@ -359,29 +390,48 @@ export const UnifiedStudio: React.FC<UnifiedStudioProps> = ({
                   />
                 </div>
 
-                {/* Duration Pills */}
-                <div>
-                  <div className="flex justify-between items-center mb-1.5">
-                    <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
-                      Episode Duration:
-                    </label>
-                    <span className="text-xs font-bold text-emerald-400">{selectedDuration} Minutes</span>
+                {/* Duration & Language Row */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                        Duration:
+                      </label>
+                      <span className="text-xs font-bold text-emerald-400">{selectedDuration} Min</span>
+                    </div>
+                    <div className="grid grid-cols-5 gap-1">
+                      {EPISODE_DURATIONS.map((dur) => (
+                        <button
+                          key={dur.minutes}
+                          type="button"
+                          onClick={() => setSelectedDuration(dur.minutes)}
+                          className={`py-1.5 px-0.5 rounded-lg text-center border transition flex flex-col items-center ${
+                            selectedDuration === dur.minutes
+                              ? 'bg-emerald-950/70 border-emerald-500 text-emerald-200 font-bold'
+                              : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <span className="text-[11px] font-bold">{dur.label}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-5 gap-1.5">
-                    {EPISODE_DURATIONS.map((dur) => (
-                      <button
-                        key={dur.minutes}
-                        type="button"
-                        onClick={() => setSelectedDuration(dur.minutes)}
-                        className={`py-2 px-1 rounded-xl text-center border transition flex flex-col items-center gap-0.5 ${
-                          selectedDuration === dur.minutes
-                            ? 'bg-emerald-950/70 border-emerald-500 text-emerald-200 font-bold ring-2 ring-emerald-500/40'
-                            : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'
-                        }`}
-                      >
-                        <span className="text-xs font-bold">{dur.label}</span>
-                      </button>
-                    ))}
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1 block">
+                      Language Track:
+                    </label>
+                    <select
+                      value={episodeLang}
+                      onChange={(e) => handleSetLanguage(e.target.value as SupportedLanguage)}
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none"
+                    >
+                      {SUPPORTED_LANGUAGES.map((l) => (
+                        <option key={l.code} value={l.code} className="bg-slate-900 text-white">
+                          {l.flag} {l.name} ({l.nativeName})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 

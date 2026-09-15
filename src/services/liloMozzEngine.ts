@@ -1,9 +1,10 @@
-import { Project, Scene, AnimalFriend, AISettings, CameraAngle, TransitionType, SFXType } from '../types/cartoon';
+import { Project, Scene, AnimalFriend, AISettings, CameraAngle, TransitionType, SFXType, SupportedLanguage } from '../types/cartoon';
 import { LILO_CHARACTER, MOZZ_CHARACTER, ANIMAL_FRIENDS } from '../data/liloMozzDefaults';
 
 interface GenerateEpisodeOptions {
   prompt: string;
   durationMinutes: number; // 2 to 20 minutes
+  language?: SupportedLanguage;
   selectedAnimal?: AnimalFriend;
   selectedOutfitLiLo?: string;
   selectedOutfitMozz?: string;
@@ -11,7 +12,7 @@ interface GenerateEpisodeOptions {
 }
 
 export async function generateLiLoMozzEpisode(options: GenerateEpisodeOptions): Promise<Project> {
-  const { prompt, durationMinutes, selectedAnimal, selectedOutfitLiLo, selectedOutfitMozz, aiSettings } = options;
+  const { prompt, durationMinutes, language = 'en-US', selectedAnimal, selectedOutfitLiLo, selectedOutfitMozz, aiSettings } = options;
   const minutes = Math.max(2, Math.min(20, durationMinutes || 3));
 
   // Determine animal friend
@@ -22,7 +23,10 @@ export async function generateLiLoMozzEpisode(options: GenerateEpisodeOptions): 
   // If Gemini or OpenAI API keys are provided and active, call live AI with LiLo & Mozz system prompt
   if (aiSettings.provider === 'gemini' && aiSettings.geminiApiKey) {
     try {
-      return await generateLiLoWithGemini(prompt, minutes, animal, aiSettings.geminiApiKey);
+      const proj = await generateLiLoWithGemini(prompt, minutes, animal, aiSettings.geminiApiKey);
+      proj.language = language;
+      proj.characters = proj.characters.map(c => ({ ...c, language }));
+      return proj;
     } catch (e) {
       console.warn('Gemini episode generation failed, falling back to smart procedural engine:', e);
     }
@@ -30,14 +34,17 @@ export async function generateLiLoMozzEpisode(options: GenerateEpisodeOptions): 
 
   if (aiSettings.provider === 'openai' && aiSettings.openaiApiKey) {
     try {
-      return await generateLiLoWithOpenAI(prompt, minutes, animal, aiSettings.openaiApiKey);
+      const proj = await generateLiLoWithOpenAI(prompt, minutes, animal, aiSettings.openaiApiKey);
+      proj.language = language;
+      proj.characters = proj.characters.map(c => ({ ...c, language }));
+      return proj;
     } catch (e) {
       console.warn('OpenAI episode generation failed, falling back to smart procedural engine:', e);
     }
   }
 
   // Smart Procedural Story Generator for LiLo & Mozz
-  return generateProceduralLiLoEpisode(prompt, minutes, animal, selectedOutfitLiLo, selectedOutfitMozz);
+  return generateProceduralLiLoEpisode(prompt, minutes, animal, selectedOutfitLiLo, selectedOutfitMozz, language);
 }
 
 /**
@@ -49,14 +56,15 @@ function generateProceduralLiLoEpisode(
   minutes: number,
   animal: AnimalFriend,
   liloOutfit: string = 'casual-dress',
-  mozzOutfit: string = 'regular-look'
+  mozzOutfit: string = 'regular-look',
+  language: SupportedLanguage = 'en-US'
 ): Project {
   const targetSeconds = minutes * 60;
   const avgSceneDuration = 8.5; // seconds per scene
   const sceneCount = Math.max(6, Math.round(targetSeconds / avgSceneDuration));
 
-  const lilo = { ...LILO_CHARACTER, selectedOutfit: liloOutfit };
-  const mozz = { ...MOZZ_CHARACTER, selectedOutfit: mozzOutfit };
+  const lilo = { ...LILO_CHARACTER, selectedOutfit: liloOutfit, language };
+  const mozz = { ...MOZZ_CHARACTER, selectedOutfit: mozzOutfit, language };
 
   const cleanPrompt = prompt.trim() || `LiLo and Mozz help ${animal.name} (${animal.species}) resolve their challenge in the lush woods`;
   const episodeTitle = `LiLo & Mozz: The Adventure of ${animal.name}`;
@@ -267,6 +275,7 @@ function generateProceduralLiLoEpisode(
     artStyle: 'pixar-3d',
     aspectRatio: '16:9',
     fps: 30,
+    language,
     bgm: 'lilo-forest-morning',
     bgmVolume: 0.35,
     characters: [lilo, mozz],
