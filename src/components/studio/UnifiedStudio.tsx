@@ -8,7 +8,9 @@ import { parseUserScreenplay } from '../../services/aiPipeline';
 import { VideoPlayerCanvas, VideoPlayerRef } from '../player/VideoPlayerCanvas';
 import { MultiTrackTimeline } from '../timeline/MultiTrackTimeline';
 import { CharacterStudio } from '../character-studio/CharacterStudio';
+import { PuppetControlBar } from './PuppetControlBar';
 import { speechSynthesizer, SUPPORTED_LANGUAGES } from '../../services/speechSynthesizer';
+import { PuppetPose } from '../../services/puppetRigEngine';
 
 interface UnifiedStudioProps {
   project: Project;
@@ -39,6 +41,7 @@ export const UnifiedStudio: React.FC<UnifiedStudioProps> = ({
   const [selectedAnimal, setSelectedAnimal] = useState<AnimalFriend>(project.animalFriend || ANIMAL_FRIENDS[0]);
   const [episodeLang, setEpisodeLang] = useState<SupportedLanguage>(project.language || 'en-US');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGreenScreen, setIsGreenScreen] = useState(false);
 
   const handleSetLanguage = (lang: SupportedLanguage) => {
     setEpisodeLang(lang);
@@ -539,6 +542,15 @@ export const UnifiedStudio: React.FC<UnifiedStudioProps> = ({
 
           {/* RIGHT PANEL: Live Moving Cartoon Theater & Video Downloader (7 cols) */}
           <div className="lg:col-span-7 flex flex-col gap-4">
+            {/* 2.5D Puppet Rig Controls & Soundstage Bar */}
+            <PuppetControlBar
+              project={project}
+              onPoseChange={(charId, pose) => playerRef.current?.setPuppetPose(charId, pose)}
+              isGreenScreen={isGreenScreen}
+              onToggleGreenScreen={() => setIsGreenScreen(!isGreenScreen)}
+              onUpdateProject={onUpdateProject}
+            />
+
             {/* Live Canvas Video Player */}
             <VideoPlayerCanvas
               ref={playerRef}
@@ -550,6 +562,7 @@ export const UnifiedStudio: React.FC<UnifiedStudioProps> = ({
               onRestart={() => setCurrentTime(0)}
               aspectRatio={aspectRatio}
               onAspectRatioChange={setAspectRatio}
+              isGreenScreen={isGreenScreen}
             />
 
             {/* Video Download Card */}

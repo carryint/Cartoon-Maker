@@ -374,8 +374,15 @@ class SoundSynthesizer {
 
   public setBgmVolume(volume: number): void {
     if (this.bgmGain && this.ctx) {
-      this.bgmGain.gain.setValueAtTime(volume, this.ctx.currentTime);
+      this.bgmGain.gain.setValueAtTime(Math.max(0, Math.min(1, volume)), this.ctx.currentTime);
     }
+  }
+
+  public duckBgm(isDucking: boolean, baseVolume: number = 0.35): void {
+    if (!this.bgmGain || !this.ctx) return;
+    const target = isDucking ? baseVolume * 0.25 : baseVolume;
+    this.bgmGain.gain.cancelScheduledValues(this.ctx.currentTime);
+    this.bgmGain.gain.linearRampToValueAtTime(target, this.ctx.currentTime + 0.2);
   }
 }
 
