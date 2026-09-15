@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  cartoon-maker:
+    build: .
+    container_name: cartoon-maker-app
+    ports:
+      - "3000:80"
+    restart: unless-stopped
