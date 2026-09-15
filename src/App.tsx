@@ -1,18 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Project, AISettings, AspectRatio } from './types/cartoon';
+import React, { useState, useEffect } from 'react';
+import { Project, AISettings } from './types/cartoon';
 import { LILO_DEFAULT_PROJECT } from './data/liloMozzDefaults';
-import { STARTER_TEMPLATES } from './data/templates';
-
-
 import { storageService } from './services/storageService';
 import { Header } from './components/Header';
-import { ScriptWizard } from './components/script-wizard/ScriptWizard';
-import { CharacterStudio } from './components/character-studio/CharacterStudio';
-import { StoryboardDirector } from './components/storyboard/StoryboardDirector';
-import { MultiTrackTimeline } from './components/timeline/MultiTrackTimeline';
-import { VideoPlayerCanvas, VideoPlayerRef } from './components/player/VideoPlayerCanvas';
-import { ExportModal } from './components/exporter/ExportModal';
+import { UnifiedStudio } from './components/studio/UnifiedStudio';
 import { AISettingsModal } from './components/settings/AISettingsModal';
+import { ExportModal } from './components/exporter/ExportModal';
 
 export const App: React.FC = () => {
   // Global Project State synced with LocalStorage
@@ -25,20 +18,9 @@ export const App: React.FC = () => {
     return storageService.getAISettings();
   });
 
-  // Active View Tab
-  const [activeTab, setActiveTab] = useState<'script' | 'characters' | 'storyboard' | 'timeline' | 'preview'>('storyboard');
-
-  // Playback & Timeline State
-  const [currentTime, setCurrentTime] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [aspectRatio, setAspectRatio] = useState<AspectRatio>(project.aspectRatio || '16:9');
-
-  // Modal States
+  const [activeTab, setActiveTab] = useState<'script' | 'characters' | 'storyboard' | 'timeline' | 'preview'>('preview');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
-
-  // Video Player Ref
-  const playerRef = useRef<VideoPlayerRef>(null);
 
   // Save project to localStorage on any modification
   useEffect(() => {
@@ -58,30 +40,17 @@ export const App: React.FC = () => {
   };
 
   const handleNewProject = () => {
-    if (confirm('Create a new LiLo & Mozz cartoon episode? Make sure to export your current project if you want to keep it.')) {
+    if (confirm('Create a new LiLo & Mozz cartoon episode? Make sure to save or export your current cartoon if needed.')) {
       const newP: Project = {
         ...LILO_DEFAULT_PROJECT,
         id: 'lilo_ep_' + Date.now(),
         title: 'LiLo & Mozz: New Forest Adventure',
-        synopsis: 'LiLo and Mozz wake up and set off into the woods to help a new animal friend',
+        synopsis: 'LiLo and Mozz set off into the forest to help a new animal friend',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
       setProject(newP);
-      setCurrentTime(0);
-      setIsPlaying(false);
-      setActiveTab('script');
     }
-  };
-
-  const handlePreviewScene = (sceneIndex: number) => {
-    let targetTime = 0;
-    for (let i = 0; i < sceneIndex; i++) {
-      targetTime += project.scenes[i].duration;
-    }
-    setCurrentTime(targetTime);
-    setIsPlaying(true);
-    setActiveTab('preview');
   };
 
   return (
@@ -97,81 +66,13 @@ export const App: React.FC = () => {
         onNewProject={handleNewProject}
       />
 
-      {/* Main Studio Viewport */}
+      {/* Unified Master Studio View */}
       <main className="flex-1 pb-16">
-        {activeTab === 'script' && (
-          <ScriptWizard
-            project={project}
-            onUpdateProject={handleUpdateProject}
-            aiSettings={aiSettings}
-            onNavigateToStoryboard={() => setActiveTab('storyboard')}
-          />
-        )}
-
-        {activeTab === 'characters' && (
-          <CharacterStudio
-            project={project}
-            onUpdateProject={handleUpdateProject}
-          />
-        )}
-
-        {activeTab === 'storyboard' && (
-          <StoryboardDirector
-            project={project}
-            onUpdateProject={handleUpdateProject}
-            onPreviewScene={handlePreviewScene}
-          />
-        )}
-
-        {activeTab === 'timeline' && (
-          <div className="max-w-7xl mx-auto p-6 flex flex-col gap-6">
-            <VideoPlayerCanvas
-              ref={playerRef}
-              project={project}
-              currentTime={currentTime}
-              isPlaying={isPlaying}
-              onTimeUpdate={setCurrentTime}
-              onTogglePlay={() => setIsPlaying(!isPlaying)}
-              onRestart={() => setCurrentTime(0)}
-              aspectRatio={aspectRatio}
-              onAspectRatioChange={setAspectRatio}
-            />
-
-            <MultiTrackTimeline
-              project={project}
-              currentTime={currentTime}
-              isPlaying={isPlaying}
-              onSeek={setCurrentTime}
-              onTogglePlay={() => setIsPlaying(!isPlaying)}
-              onRestart={() => setCurrentTime(0)}
-            />
-          </div>
-        )}
-
-        {activeTab === 'preview' && (
-          <div className="max-w-7xl mx-auto p-6 flex flex-col gap-6">
-            <VideoPlayerCanvas
-              ref={playerRef}
-              project={project}
-              currentTime={currentTime}
-              isPlaying={isPlaying}
-              onTimeUpdate={setCurrentTime}
-              onTogglePlay={() => setIsPlaying(!isPlaying)}
-              onRestart={() => setCurrentTime(0)}
-              aspectRatio={aspectRatio}
-              onAspectRatioChange={setAspectRatio}
-            />
-
-            <MultiTrackTimeline
-              project={project}
-              currentTime={currentTime}
-              isPlaying={isPlaying}
-              onSeek={setCurrentTime}
-              onTogglePlay={() => setIsPlaying(!isPlaying)}
-              onRestart={() => setCurrentTime(0)}
-            />
-          </div>
-        )}
+        <UnifiedStudio
+          project={project}
+          onUpdateProject={handleUpdateProject}
+          aiSettings={aiSettings}
+        />
       </main>
 
       {/* Export / Render Modal */}
@@ -180,10 +81,10 @@ export const App: React.FC = () => {
         onClose={() => setIsExportOpen(false)}
         project={project}
         onImportProject={(imported) => setProject(imported)}
-        getCanvas={() => playerRef.current?.getCanvas() || null}
-        onSeek={(time) => setCurrentTime(time)}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
+        getCanvas={() => document.querySelector('canvas')}
+        onSeek={() => {}}
+        onPlay={() => {}}
+        onPause={() => {}}
       />
 
       {/* AI Settings Modal */}

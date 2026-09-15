@@ -1,9 +1,8 @@
 import { Project, AISettings } from '../types/cartoon';
 import { LILO_DEFAULT_PROJECT } from '../data/liloMozzDefaults';
-import { STARTER_TEMPLATES } from '../data/templates';
 
-const ACTIVE_PROJECT_KEY = 'cartoon_maker_active_project';
-const SAVED_PROJECTS_KEY = 'cartoon_maker_saved_projects_list';
+const ACTIVE_PROJECT_KEY = 'cartoon_maker_lilo_active_project_v2';
+const SAVED_PROJECTS_KEY = 'cartoon_maker_lilo_saved_projects_v2';
 const SETTINGS_KEY = 'cartoon_maker_ai_settings';
 
 export interface SavedProjectMeta {
@@ -25,7 +24,7 @@ export const storageService = {
       const saved = localStorage.getItem(ACTIVE_PROJECT_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && parsed.characters && parsed.scenes && (parsed.id.includes('lilo') || parsed.title.includes('LiLo'))) {
+        if (parsed && parsed.characters && parsed.scenes && (parsed.id?.includes('lilo') || parsed.title?.includes('LiLo') || parsed.characters.some((c: any) => c.name === 'LiLo'))) {
           return parsed;
         }
       }
@@ -61,13 +60,13 @@ export const storageService = {
     }
     return [
       {
-        id: STARTER_TEMPLATES[0].id,
-        title: STARTER_TEMPLATES[0].title,
-        synopsis: STARTER_TEMPLATES[0].synopsis,
-        sceneCount: STARTER_TEMPLATES[0].scenes.length,
-        characterCount: STARTER_TEMPLATES[0].characters.length,
-        updatedAt: STARTER_TEMPLATES[0].updatedAt,
-        artStyle: STARTER_TEMPLATES[0].artStyle,
+        id: LILO_DEFAULT_PROJECT.id,
+        title: LILO_DEFAULT_PROJECT.title,
+        synopsis: LILO_DEFAULT_PROJECT.synopsis,
+        sceneCount: LILO_DEFAULT_PROJECT.scenes.length,
+        characterCount: LILO_DEFAULT_PROJECT.characters.length,
+        updatedAt: LILO_DEFAULT_PROJECT.updatedAt,
+        artStyle: LILO_DEFAULT_PROJECT.artStyle,
       }
     ];
   },
@@ -111,9 +110,7 @@ export const storageService = {
       if (data) {
         return JSON.parse(data);
       }
-      // Check templates
-      const tmpl = STARTER_TEMPLATES.find(t => t.id === id);
-      if (tmpl) return tmpl;
+      if (id === LILO_DEFAULT_PROJECT.id) return LILO_DEFAULT_PROJECT;
     } catch (e) {
       console.warn('Error loading project by ID:', e);
     }
