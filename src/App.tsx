@@ -1,160 +1,285 @@
-import { useState, useCallback } from 'react';
-import { Film, Sparkles, ChevronRight, ChevronLeft, ExternalLink, RotateCcw } from 'lucide-react';
-import StepIndicator from './components/wizard/StepIndicator';
-import CharacterBoardUploader from './components/characters/CharacterBoardUploader';
-import ScriptEditor from './components/script/ScriptEditor';
-import VideoDirector from './components/director/VideoDirector';
-import { Project, Character, Scene } from './types/studio';
-import { DEFAULT_PROJECT } from './data/defaults';
-import { loadProject, saveProject, clearProject } from './services/aiVideoEngine';
+import { useState, useEffect } from 'react';
+import Header from './components/layout/Header';
+import Sidebar from './components/layout/Sidebar';
+import MainDashboard from './components/dashboard/MainDashboard';
+import FirstRunWizard from './components/dashboard/FirstRunWizard';
+import OneClickModal from './components/dashboard/OneClickModal';
+import CharacterStudio from './components/characters/CharacterStudio';
+import LocationStudio from './components/locations/LocationStudio';
+import PropStudio from './components/props/PropStudio';
+import ScriptStudio from './components/script/ScriptStudio';
+import StoryboardStudio from './components/storyboard/StoryboardStudio';
+import AIDirectorStudio from './components/director/AIDirectorStudio';
+import MultiTrackTimeline from './components/timeline/MultiTrackTimeline';
+import VideoPlayerStudio from './components/render/VideoPlayerStudio';
+import QualityControlView from './components/qc/QualityControlModal';
+import ProviderSettingsModal from './components/providers/ProviderSettingsModal';
 
-function App() {
-  const [step, setStep] = useState(1);
-  const [project, setProject] = useState<Project>(() => loadProject() ?? DEFAULT_PROJECT);
+import { Project, CharacterDNA, LocationDNA, PropDNA, Scene } from './types/lilo';
+import { DEMO_PROJECT } from './data/demoProject';
+import { loadActiveProject, saveActiveProject } from './core/engines/storageEngine';
+import { parseScriptToScenes } from './core/engines/scriptEngine';
+import { runQualityControlChecks } from './core/engines/qualityEngine';
 
-  const updateProject = useCallback((updates: Partial<Project>) => {
-    setProject(prev => {
-      const updated = { ...prev, ...updates, updatedAt: new Date().toISOString() };
-      saveProject(updated);
+export default function App() {
+  const [project, setProject] = useState<Project>(() => {
+    const saved = loadActiveProject();
+    if (saved && saved.characters && saved.characters.length > 0) {
+      return saved;
+    }
+    // Initialize demo episode by default
+    const initial = { ...DEMO_PROJECT };
+    const scenes = parseScriptToScenes(initial.rawScript, initial.characters, initial.locations);
+    initial.scenes = scenes;
+    initial.storyboard = scenes.map((s) => ({
+      sceneId: s.id,
+      sceneNumber: s.sceneNumber,
+      title: s.title,
+      description: s.description,
+      characterNames: s.characterIds.map((cId) => initial.characters.find((c) => c.id === cId)?.name || 'Character'),
+      locationName: initial.locations.find((l) => l.id === s.locationId)?.name || 'Location',
+      dialogueCount: s.dialogues.length,
+      duration: s.duration,
+      camera: s.camera.shot,
+      isApproved: true,
+    }));
+    initial.qualityReport = runQualityControlChecks(initial);
+    return initial;
+  });
+
+  const [currentTab, setCurrentTab] = useState<string>('dashboard');
+  const [isProMode, setIsProMode] = useState<boolean>(false);
+  const [showOneClick, setShowOneClick] = useState<boolean>(false);
+  const [showProviders, setShowProviders] = useState<boolean>(false);
+  const [showFirstRun, setShowFirstRun] = useState<boolean>(() => {
+    return !localStorage.getItem('lilo_first_run_seen_v1');
+  });
+
+  // Save changes to storage
+  useEffect(() => {
+    saveActiveProject(project);
+  }, [project]);
+
+  const updateProject = (updates: Partial<Project>) => {
+    setProject((prev) => {
+      const updated = { ...prev, ...updates };
+      updated.qualityReport = runQualityControlChecks(updated);
       return updated;
     });
-  }, []);
-
-  const handleCharactersUpdate = (chars: Character[]) => updateProject({ characters: chars });
-  const handleScriptChange = (script: string) => updateProject({ rawScript: script, scenes: [] });
-  const handleParse = (scenes: Scene[]) => updateProject({ scenes });
-  const handleProjectUpdate = (p: Project) => { setProject(p); saveProject(p); };
-
-  const canGoNext = () => {
-    if (step === 1) return project.characters.length > 0;
-    if (step === 2) return project.rawScript.trim().length > 20;
-    return true;
   };
 
-  const resetProject = () => {
-    if (window.confirm('Start fresh? This will clear all current data.')) {
-      clearProject();
-      setProject(DEFAULT_PROJECT);
-      setStep(1);
+  const handleUpdateCharacters = (chars: CharacterDNA[]) => {
+    updateProject({ characters: chars });
+  };
+
+  const handleUpdateLocations = (locs: LocationDNA[]) => {
+    updateProject({ locations: locs });
+  };
+
+  const handleUpdateProps = (props: PropDNA[]) => {
+    updateProject({ props });
+  };
+
+  const handleUpdateScenes = (scenes: Scene[]) => {
+    updateProject({ scenes });
+  };
+
+  const handleLoadDemo = () => {
+    const demo = { ...DEMO_PROJECT };
+    const scenes = parseScriptToScenes(demo.rawScript, demo.characters, demo.locations);
+    demo.scenes = scenes;
+    demo.storyboard = scenes.map((s) => ({
+      sceneId: s.id,
+      sceneNumber: s.sceneNumber,
+      title: s.title,
+      description: s.description,
+      characterNames: s.characterIds.map((cId) => demo.characters.find((c) => c.id === cId)?.name || 'Character'),
+      locationName: demo.locations.find((l) => l.id === s.locationId)?.name || 'Location',
+      dialogueCount: s.dialogues.length,
+      duration: s.duration,
+      camera: s.camera.shot,
+      isApproved: true,
+    }));
+    demo.qualityReport = runQualityControlChecks(demo);
+    setProject(demo);
+    setCurrentTab('dashboard');
+  };
+
+  const handleResetProject = () => {
+    if (window.confirm('Start fresh? This will clear all characters, scenes, and settings.')) {
+      const emptyProject: Project = {
+        id: `project_${Date.now()}`,
+        seriesName: 'Original Cartoon Series',
+        title: 'Episode 1',
+        episodeNumber: 1,
+        tagline: 'An original story for kids',
+        description: 'Create your cartoon from scratch.',
+        targetAudience: 'early-childhood-5-7',
+        language: 'en-US',
+        visualStyle: 'storybook-3d',
+        aspectRatio: '16:9',
+        resolution: '1080p',
+        fps: 30,
+        isChildSafeMode: true,
+        rawScript: '',
+        characters: [],
+        locations: [],
+        props: [],
+        scenes: [],
+        storyboard: [],
+        activeProviderId: 'local-browser',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setProject(emptyProject);
+      setCurrentTab('characters');
     }
   };
 
   return (
-    <div className="min-h-screen bg-studio-dark text-white">
-      {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg,#fbbf24,#f59e0b)' }}>
-              <Film size={20} className="text-slate-900" />
-            </div>
-            <div>
-              <div className="font-bold text-white text-sm leading-tight">AI Video Studio</div>
-              <div className="text-xs text-slate-500 leading-tight">{project.title}</div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[#0b0f19] text-white flex flex-col font-sans selection:bg-amber-400 selection:text-slate-950">
+      {/* Studio Header */}
+      <Header
+        project={project}
+        currentTab={currentTab}
+        onTabChange={setCurrentTab}
+        isProMode={isProMode}
+        onToggleProMode={() => setIsProMode(!isProMode)}
+        onOpenOneClick={() => setShowOneClick(true)}
+        onOpenProviders={() => setShowProviders(true)}
+        onLoadDemo={handleLoadDemo}
+        onResetProject={handleResetProject}
+      />
 
-          <div className="flex items-center gap-2">
-            <span className="hidden sm:block text-xs text-slate-500 px-3 py-1 bg-slate-800 rounded-full border border-slate-700">
-              <Sparkles size={10} className="inline mr-1 text-amber-400" />
-              Powered by AI
-            </span>
-            <a
-              href="https://github.com/carryint/Cartoon-Maker"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-500 transition-colors"
-              title="View on GitHub"
-            >
-              <ExternalLink size={16} className="text-slate-300" />
-            </a>
-            <button onClick={resetProject}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-red-500/50 hover:text-red-400 transition-colors"
-              title="Reset Project">
-              <RotateCcw size={16} className="text-slate-400" />
-            </button>
-          </div>
-        </div>
-      </header>
+      {/* Main Studio Body */}
+      <div className="flex-1 flex">
+        {/* Navigation Sidebar */}
+        <Sidebar
+          currentTab={currentTab}
+          onSelectTab={setCurrentTab}
+          characterCount={project.characters.length}
+          locationCount={project.locations.length}
+          sceneCount={project.scenes.length}
+          qcScore={project.qualityReport?.overallScore}
+        />
 
-      {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
-        {/* Step Indicator */}
-        <StepIndicator currentStep={step} />
-
-        {/* Project Title Input */}
-        {step === 1 && (
-          <div className="mb-8">
-            <label className="text-xs text-slate-400 mb-1.5 block">Project / Episode Title</label>
-            <input
-              value={project.title}
-              onChange={e => updateProject({ title: e.target.value })}
-              placeholder="e.g. LiLo & Mozz — The Lost Turtle"
-              className="w-full max-w-lg bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-400/70 transition-colors"
-            />
-          </div>
-        )}
-
-        {/* Step Content */}
-        <div className="min-h-[500px]">
-          {step === 1 && (
-            <CharacterBoardUploader
-              characters={project.characters}
-              onUpdate={handleCharactersUpdate}
-            />
-          )}
-          {step === 2 && (
-            <ScriptEditor
-              rawScript={project.rawScript}
-              characters={project.characters}
-              scenes={project.scenes}
-              onScriptChange={handleScriptChange}
-              onParse={handleParse}
-            />
-          )}
-          {step === 3 && (
-            <VideoDirector
+        {/* Tab Content Canvas */}
+        <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full">
+          {currentTab === 'dashboard' && (
+            <MainDashboard
               project={project}
-              onProjectUpdate={handleProjectUpdate}
+              onSelectTab={setCurrentTab}
+              onOpenOneClick={() => setShowOneClick(true)}
+              onLoadDemo={handleLoadDemo}
             />
           )}
-        </div>
 
-        {/* Navigation */}
-        <div className="flex items-center justify-between mt-10 pt-6 border-t border-slate-800">
-          <button
-            onClick={() => setStep(s => Math.max(1, s - 1))}
-            disabled={step === 1}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed text-sm font-medium"
-          >
-            <ChevronLeft size={16} /> Back
-          </button>
-
-          <div className="text-xs text-slate-600">{step} of 3</div>
-
-          {step < 3 ? (
-            <button
-              onClick={() => setStep(s => Math.min(3, s + 1))}
-              disabled={!canGoNext()}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-slate-900 transition-all hover:scale-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed text-sm"
-              style={{ background: 'linear-gradient(135deg,#fbbf24,#f59e0b)' }}
-            >
-              {step === 1 ? 'Write Script' : 'Generate Video'}
-              <ChevronRight size={16} />
-            </button>
-          ) : (
-            <div className="w-28" />
+          {currentTab === 'characters' && (
+            <CharacterStudio
+              characters={project.characters}
+              onUpdateCharacters={handleUpdateCharacters}
+            />
           )}
-        </div>
-      </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-800 mt-20 py-6 text-center text-xs text-slate-600">
-        AI Video Studio · Built with React + Vite · Canvas-based 4K rendering · Web Speech API
-      </footer>
+          {currentTab === 'locations' && (
+            <LocationStudio
+              locations={project.locations}
+              onUpdateLocations={handleUpdateLocations}
+            />
+          )}
+
+          {currentTab === 'props' && (
+            <PropStudio
+              propsList={project.props}
+              onUpdateProps={handleUpdateProps}
+            />
+          )}
+
+          {currentTab === 'script' && (
+            <ScriptStudio
+              project={project}
+              onUpdateProject={updateProject}
+              onProceedToStoryboard={() => setCurrentTab('storyboard')}
+            />
+          )}
+
+          {currentTab === 'storyboard' && (
+            <StoryboardStudio
+              project={project}
+              onUpdateScenes={handleUpdateScenes}
+              onProceedToTimeline={() => setCurrentTab('timeline')}
+              onProceedToRender={() => setCurrentTab('render')}
+            />
+          )}
+
+          {currentTab === 'director' && (
+            <AIDirectorStudio
+              project={project}
+              onProceedToStoryboard={() => setCurrentTab('storyboard')}
+              onProceedToRender={() => setCurrentTab('render')}
+            />
+          )}
+
+          {currentTab === 'timeline' && (
+            <MultiTrackTimeline
+              project={project}
+              onProceedToRender={() => setCurrentTab('render')}
+            />
+          )}
+
+          {currentTab === 'render' && (
+            <VideoPlayerStudio
+              project={project}
+              onUpdateProject={updateProject}
+            />
+          )}
+
+          {currentTab === 'qc' && (
+            <QualityControlView
+              project={project}
+              onUpdateProject={updateProject}
+            />
+          )}
+
+          {currentTab === 'providers' && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-white">AI Provider Configuration</h2>
+              <p className="text-slate-400 text-sm">Configure external AI models or use the built-in free local engine.</p>
+              <button
+                onClick={() => setShowProviders(true)}
+                className="px-6 py-3 rounded-2xl font-bold text-slate-950 text-sm"
+                style={{ background: 'linear-gradient(135deg,#fbbf24,#f59e0b)' }}
+              >
+                Open Provider Registry Settings
+              </button>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* Modals & Wizards */}
+      <FirstRunWizard
+        isOpen={showFirstRun}
+        onClose={() => {
+          localStorage.setItem('lilo_first_run_seen_v1', 'true');
+          setShowFirstRun(false);
+        }}
+        onStartOneClick={() => setShowOneClick(true)}
+        onLoadDemo={handleLoadDemo}
+      />
+
+      <OneClickModal
+        isOpen={showOneClick}
+        onClose={() => setShowOneClick(false)}
+        project={project}
+        onSaveProject={(p) => setProject(p)}
+        onProceedToRender={() => setCurrentTab('render')}
+      />
+
+      <ProviderSettingsModal
+        isOpen={showProviders}
+        onClose={() => setShowProviders(false)}
+      />
     </div>
   );
 }
-
-export default App;
