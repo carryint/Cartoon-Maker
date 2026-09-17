@@ -29,7 +29,20 @@ export function loadProject(): Project | null {
 }
 
 export function clearProject(): void {
-  localStorage.removeItem(STORAGE_KEY);
+  try {
+    const keysToRemove = [
+      'aivideo_project_v1',
+      'aivideo_project_v2',
+      'aivideo_project_v3',
+      'aivideo_project_v4',
+      'cartoon_maker_lilo_active_project_v2',
+      'cartoon_maker_active_project',
+    ];
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+    localStorage.clear();
+  } catch (e) {
+    console.warn('Could not clear localStorage:', e);
+  }
 }
 
 /**
